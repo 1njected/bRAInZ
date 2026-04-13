@@ -1,0 +1,150 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>bRAInZ</title>
+  <style>
+    :root {
+      --bg: #1a1a2e;
+      --bg2: #16213e;
+      --accent: #0f3460;
+      --highlight: #e94560;
+      --text: #eaeaea;
+      --text-dim: #9a9ab0;
+      --border: #2a2a4a;
+      --success: #4caf50;
+      --error: #e94560;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: 'Segoe UI', system-ui, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      width: 340px;
+      min-height: 200px;
+      padding: 0;
+    }
+    header {
+      background: var(--bg2);
+      border-bottom: 1px solid var(--border);
+      padding: 12px 16px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+    header h1 {
+      font-size: 18px;
+      font-weight: 700;
+      color: var(--highlight);
+      letter-spacing: 0.05em;
+    }
+    header a {
+      color: var(--text-dim);
+      font-size: 12px;
+      text-decoration: none;
+    }
+    header a:hover { color: var(--text); }
+    main { padding: 16px; }
+    .field { margin-bottom: 12px; }
+    label {
+      display: block;
+      font-size: 11px;
+      color: var(--text-dim);
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      margin-bottom: 4px;
+    }
+    input, select, textarea {
+      width: 100%;
+      background: var(--bg2);
+      border: 1px solid var(--border);
+      border-radius: 4px;
+      color: var(--text);
+      font-size: 13px;
+      padding: 7px 10px;
+      outline: none;
+      transition: border-color 0.15s;
+    }
+    input:focus, select:focus, textarea:focus {
+      border-color: var(--highlight);
+    }
+    select option { background: var(--bg2); }
+    textarea { resize: none; height: 52px; font-size: 12px; }
+    .url-display {
+      font-size: 11px;
+      color: var(--text-dim);
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+      background: var(--accent);
+      border-radius: 4px;
+      padding: 5px 8px;
+    }
+    .actions {
+      display: flex;
+      gap: 8px;
+      margin-top: 4px;
+    }
+    button {
+      flex: 1;
+      background: var(--highlight);
+      color: white;
+      border: none;
+      border-radius: 4px;
+      padding: 9px 12px;
+      font-size: 13px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: opacity 0.15s;
+    }
+    button:hover { opacity: 0.88; }
+    button:disabled { opacity: 0.45; cursor: default; }
+    button.secondary {
+      background: var(--accent);
+      font-weight: 400;
+    }
+    #status {
+      margin-top: 10px;
+      font-size: 12px;
+      text-align: center;
+      min-height: 18px;
+    }
+    .status-ok { color: var(--success); }
+    .status-err { color: var(--error); }
+    .status-loading { color: var(--text-dim); }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>bRAInZ</h1>
+    <a id="dashLink" href="#" target="_blank">Dashboard ↗</a>
+  </header>
+  <main>
+    <div class="field">
+      <label>URL</label>
+      <div class="url-display" id="urlDisplay">Loading...</div>
+    </div>
+    <div class="field">
+      <label>Title</label>
+      <input type="text" id="titleInput" placeholder="Page title">
+    </div>
+    <div class="field">
+      <label>Category</label>
+      <select id="categorySelect">
+        <option value="">Auto-classify</option>
+      </select>
+    </div>
+    <div class="field">
+      <label>Tags (comma-separated)</label>
+      <input type="text" id="tagsInput" placeholder="e.g. jwt, burp-suite, sqli">
+    </div>
+    <div class="actions">
+      <button id="saveBtn">Save</button>
+      <button id="saveCloseBtn" class="secondary">Save &amp; Close</button>
+    </div>
+    <div id="status"></div>
+  </main>
+  <script src="popup.js"></script>
+</body>
+</html>

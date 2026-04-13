@@ -1,0 +1,224 @@
+# bRAInZ — Curated tag list
+# Concepts, techniques, and protocols — not tool names.
+# Tools are ephemeral; concepts are searchable forever.
+
+tags:
+  # ai
+  - prompt-injection
+  - jailbreak
+  - model-inversion
+  - data-poisoning
+  - rag-poisoning
+
+  # appsec
+  - xss
+  - csrf
+  - sqli
+  - ssrf
+  - xxe
+  - idor
+  - lfi
+  - rce
+  - path-traversal
+  - file-upload
+  - deserialization
+  - template-injection
+  - jwt
+  - oauth
+  - saml
+  - cors
+  - graphql
+  - api-security
+
+  # blueteam
+  - detection
+  - threat-hunting
+  - incident-response
+  - hardening
+  - audit
+  - honeypot
+  - log-analysis
+  - ioc
+  - sigma
+
+  # cloud
+  - iam
+  - serverless
+  - container
+  - misconfiguration
+  - audit
+  - secrets-exposure
+  - lateral-movement
+
+  # crypto
+  - symmetric
+  - asymmetric
+  - pki
+  - tls
+  - padding-oracle
+  - side-channel
+  - timing-attack
+  - hash-collision
+  - zero-knowledge
+
+  # devops
+  - ci-cd
+  - supply-chain
+  - secrets-management
+  - dependency-confusion
+  - iac
+  - sast
+  - sbom
+
+  # forensics
+  - memory-forensics
+  - disk-forensics
+  - timeline
+  - artifact
+  - pcap
+  - registry
+  - log-analysis
+
+  # fuzzing
+  - coverage-guided
+  - corpus
+  - harness
+  - crash-triage
+  - sanitizer
+
+  # hw
+  - firmware
+  - embedded
+  - jtag
+  - uart
+  - fault-injection
+  - glitching
+  - side-channel
+  - chip-off
+
+  # ics
+  - scada
+  - plc
+  - hmi
+  - modbus
+  - dnp3
+  - opc-ua
+  - ot-security
+  - purdue-model
+
+  # malware
+  - ransomware
+  - rootkit
+  - c2
+  - persistence
+  - evasion
+  - shellcode
+  - unpacking
+  - obfuscation
+
+  # mobile
+  - android
+  - ios
+  - ssl-pinning
+  - root-detection
+  - webview
+  - deeplink
+  - mdm
+
+  # netsec
+  - mitm
+  - arp-spoofing
+  - dns
+  - pivoting
+  - wifi
+  - wpa2
+  - firewall-bypass
+  - proxy
+
+  # os
+  - linux
+  - windows
+  - macos
+  - privesc
+  - kernel
+  - rop
+  - heap
+  - aslr-bypass
+  - lpe
+
+  # osint
+  - recon
+  - google-dorks
+  - social-engineering
+  - phishing
+  - whois
+
+  # redteam
+  - lateral-movement
+  - credential-access
+  - pass-the-hash
+  - kerberoasting
+  - asreproasting
+  - dcsync
+  - kerberos
+  - ntlm
+  - ad-cs
+  - password-spray
+  - bloodhound
+
+  # reversing
+  - disassembly
+  - decompilation
+  - anti-debug
+  - deobfuscation
+  - elf
+  - pe
+  - patching
+
+  # rf
+  - sdr
+  - ble
+  - zigbee
+  - rfid
+  - nfc
+  - replay-attack
+  - gps-spoofing
+
+  # blockchain
+  - solidity
+  - evm
+  - smart-contract
+  - defi
+  - reentrancy
+  - flash-loan
+  - access-control
+  - proxy-pattern
+  - on-chain-forensics
+
+  # techstack — platforms & products (what, not how)
+
+  # identity & directory
+  - active-directory
+  - azure-ad
+  - okta
+
+  # cloud platforms
+  - aws
+  - azure
+  - gcp
+
+  # os / runtime
+  - docker
+  - kubernetes
+
+  # network protocols
+  - smb
+  - rdp
+  - ssh
+  - http2
+
+  # web / app stack
+  - rest
+  - grpc
+  - websocket
+  - wasm

@@ -1,0 +1,13 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128">
+  <!-- Background -->
+  <rect width="128" height="128" rx="24" fill="#1a1a2e"/>
+  <!-- Shield -->
+  <path d="M64 18 L94 30 L94 62 Q94 88 64 106 Q34 88 34 62 L34 30 Z"
+        fill="#0f3460" stroke="#e94560" stroke-width="3"/>
+  <!-- Brain squiggle suggestion -->
+  <path d="M50 52 Q56 44 64 52 Q72 60 78 52"
+        fill="none" stroke="#e94560" stroke-width="3" stroke-linecap="round"/>
+  <path d="M46 62 Q52 70 60 64 Q68 58 74 64 Q80 70 82 62"
+        fill="none" stroke="#e94560" stroke-width="2.5" stroke-linecap="round"/>
+  <line x1="64" y1="52" x2="64" y2="80" stroke="#e94560" stroke-width="2.5" stroke-linecap="round"/>
+</svg>

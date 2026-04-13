@@ -1,0 +1,52 @@
+# Environment
+.env
+*.env
+
+# Data volume (runtime content, not source)
+data/library/
+data/embeddings/
+data/skills/
+data/inbox/
+data/in/
+data/failed/
+data/digest/
+data/rssfeeds/
+data/tools/
+data/plans/
+data/index.json
+data/feeds.yaml
+data/tools.yaml
+data/logs/
+
+tests/testdata/
+
+
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+venv/
+dist/
+build/
+*.egg
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Test artifacts
+.pytest_cache/
+.coverage
+htmlcov/
+
+CLAUDE.md
+.claude/
+docs/BRAINZ-PLAN.md
+docs/TODO.md

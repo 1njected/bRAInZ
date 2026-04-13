@@ -1,0 +1,13 @@
+services:
+  brainz-test:
+    build:
+      context: ..
+      dockerfile: Dockerfile
+    volumes:
+      - ../backend:/app
+      - ./:/tests
+      - ../data:/data
+    environment:
+      - DATA_DIR=/data
+      - API_KEYS=
+    command: python -m pytest /tests/ -q --tb=short

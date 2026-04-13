@@ -1,0 +1,25 @@
+# bRAInZ — Category definitions
+# Edit freely — re-read on every request, no restart required.
+# 'misc' is always used as classifier fallback; keep it last.
+
+categories:
+  - ai            # LLM security, prompt injection, model attacks, AI/ML ops
+  - appsec        # Web/API vulns: XSS, SQLi, SSRF, CORS, request smuggling, OWASP, auth, client-side attacks
+  - blueteam      # Detection, SIEM, IR, threat hunting, hardening, logging
+  - cloud         # AWS/Azure/GCP, IAM, serverless, container orchestration
+  - crypto        # Cryptography, PKI, TLS, cipher attacks, side-channels
+  - devops        # CI/CD security, supply chain, secrets management, IaC
+  - forensics     # Disk/memory forensics, artefact analysis, timeline, DFIR
+  - fuzzing       # Coverage-guided fuzzing, libFuzzer, AFL, bug hunting
+  - hw            # Hardware hacking, embedded, JTAG, UART, firmware
+  - ics           # ICS/OT/SCADA, Modbus, DNP3, PLCs, industrial protocols
+  - malware       # Malware analysis, C2, persistence, evasion, sandboxing
+  - mobile        # Android & iOS security, APK analysis, MDM, Frida (tag: android/ios)
+  - netsec        # Network attacks, protocols, MITM, sniffing, pivoting
+  - os            # OS internals, privilege escalation (tag: linux/windows/macos)
+  - osint         # Recon, footprinting, SOCMINT, GEOINT, dorks
+  - redteam       # Offensive ops, C2 frameworks, tradecraft, credentials, AD
+  - reversing     # Binary analysis, disassembly, decompilation, anti-debug
+  - rf            # Radio/SDR, BLE, Zigbee, RFID, NFC, GPS spoofing
+  - blockchain    # Blockchain, smart contracts, DeFi, EVM, Solidity auditing — NOT general web attacks
+  - misc          # Uncategorised / classifier fallback

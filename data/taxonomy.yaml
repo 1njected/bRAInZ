@@ -1,0 +1,270 @@
+categories:
+- name: ai
+  description: LLM security, prompt injection, model attacks, AI/ML ops
+  tags:
+  - prompt-injection
+  - jailbreak
+  - model-inversion
+  - data-poisoning
+  - rag-poisoning
+- name: appsec
+  description: 'Web/API vulns: XSS, SQLi, SSRF, CORS, request smuggling, OWASP, auth,
+    client-side attacks'
+  tags:
+  - xss
+  - csrf
+  - sqli
+  - ssrf
+  - xxe
+  - idor
+  - lfi
+  - rce
+  - path-traversal
+  - file-upload
+  - deserialization
+  - template-injection
+  - jwt
+  - oauth
+  - saml
+  - cors
+  - graphql
+  - api-security
+  - websocket
+  - http2
+  - rest
+  - grpc
+  - wasm
+  - request-smuggling
+  - race-condition
+  - open-redirect
+  - clickjacking
+  - prototype-pollution
+  - cache-poisoning
+  - business-logic
+- name: blueteam
+  description: Detection, SIEM, IR, threat hunting, hardening, logging
+  tags:
+  - detection
+  - threat-hunting
+  - incident-response
+  - hardening
+  - audit
+  - honeypot
+  - log-analysis
+  - ioc
+  - sigma
+- name: blockchain
+  description: Blockchain, smart contracts, DeFi, EVM, Solidity auditing — NOT general
+    web attacks
+  tags:
+  - solidity
+  - evm
+  - smart-contract
+  - defi
+  - reentrancy
+  - flash-loan
+  - access-control
+  - proxy-pattern
+  - on-chain-forensics
+- name: cloud
+  description: AWS/Azure/GCP, IAM, serverless, container orchestration
+  tags:
+  - iam
+  - serverless
+  - container
+  - misconfiguration
+  - secrets-exposure
+  - lateral-movement
+  - aws
+  - azure
+  - gcp
+  - docker
+  - kubernetes
+  - entra id
+- name: crypto
+  description: Cryptography, PKI, TLS, cipher attacks, side-channels
+  tags:
+  - symmetric
+  - asymmetric
+  - pki
+  - tls
+  - padding-oracle
+  - side-channel
+  - timing-attack
+  - hash-collision
+  - zero-knowledge
+- name: devops
+  description: CI/CD security, supply chain, secrets management, IaC
+  tags:
+  - ci-cd
+  - supply-chain
+  - secrets-management
+  - dependency-confusion
+  - iac
+  - sast
+  - sbom
+- name: forensics
+  description: Disk/memory forensics, artefact analysis, timeline, DFIR
+  tags:
+  - memory-forensics
+  - disk-forensics
+  - timeline
+  - artifact
+  - pcap
+  - registry
+  - log-analysis
+- name: fuzzing
+  description: Coverage-guided fuzzing, libFuzzer, AFL, bug hunting
+  tags:
+  - coverage-guided
+  - corpus
+  - harness
+  - crash-triage
+  - sanitizer
+- name: hw
+  description: Hardware hacking, embedded, JTAG, UART, firmware, side-channels, fault injection, chip-off, glitching, RF, SDR, Zigbee, RFID, NFC
+  tags:
+  - firmware
+  - embedded
+  - jtag
+  - uart
+  - fault-injection
+  - glitching
+  - side-channel
+  - chip-off
+- name: ics
+  description: ICS/OT/SCADA, Modbus, DNP3, PLCs, industrial protocols
+  tags:
+  - scada
+  - plc
+  - hmi
+  - modbus
+  - dnp3
+  - opc-ua
+  - ot-security
+  - purdue-model
+- name: malware
+  description: Malware analysis, C2, persistence, evasion, sandboxing
+  tags:
+  - ransomware
+  - rootkit
+  - c2
+  - persistence
+  - evasion
+  - shellcode
+  - unpacking
+  - obfuscation
+- name: mobile
+  description: Android & iOS security and exploitation, APK analysis, MDM, Frida
+  tags:
+  - android
+  - ios
+  - ssl-pinning
+  - root-detection
+  - webview
+  - deeplink
+  - mdm
+- name: netsec
+  description: Network attacks, protocols, MITM, sniffing, pivoting
+  tags:
+  - mitm
+  - arp-spoofing
+  - dns
+  - pivoting
+  - wifi
+  - wpa2
+  - firewall-bypass
+  - proxy
+  - smb
+  - rdp
+  - ssh
+  - ldap
+- name: os
+  description: OS internals, kernel, privilege escalation, OS-level security mechanisms (ASLR, NX, seccomp)
+  tags:
+  - linux
+  - windows
+  - macos
+  - privesc
+  - kernel
+  - lpe
+  - winrm
+- name: osint
+  description: Recon, footprinting, SOCMINT, GEOINT, dorks, dns enumeration, domain enumaration, 
+  tags:
+  - recon
+  - google-dorks
+  - social-engineering
+  - phishing
+  - whois
+  - dns-enum
+  - domain-enum
+  - geoint
+  - socmint
+  - subdomain-takeover
+- name: redteam
+  description: Offensive ops, C2 frameworks, credentials, AD, post-exploitation, lateral movement, bloodhound
+  tags:
+  - lateral-movement
+  - credential-access
+  - pass-the-hash
+  - kerberoasting
+  - asreproasting
+  - dcsync
+  - kerberos
+  - ntlm
+  - ad-cs
+  - password-spray
+  - bloodhound
+  - active-directory
+  - azure-ad
+  - okta
+  - edr
+  - xdr
+  - inital access
+  - evasion
+  - citrix
+  - breakout
+- name: reversing
+  description: Binary analysis, disassembly, decompilation, exploit development, CVE analysis, vulnerability research, memory corruption (buffer overflow, integer overflow/underflow, use-after-free, heap, ROP), patching, ELF, PE, IDA, Ghidra, x64dbg
+  tags:
+  - disassembly
+  - decompilation
+  - anti-debug
+  - deobfuscation
+  - elf
+  - pe
+  - patching
+  - buffer overflow
+  - use-after-free
+  - format string
+  - ghidra
+  - ida
+  - x64dbg
+  - radare2
+  - off-by-one
+  - rop
+  - alsr bypass
+  - dep bypass
+  - integer overflow
+  - exploit development
+  - exploit writeup
+  - cve analysis
+  - vulnerability analysis
+  - integer underflow
+  - firmware-analysis
+  - binary-analysis
+- name: rf
+  description: Radio/SDR, BLE, Zigbee, RFID, NFC, GPS spoofing
+  tags:
+  - sdr
+  - ble
+  - zigbee
+  - rfid
+  - nfc
+  - replay-attack
+  - gps-spoofing
+  - 5g
+- name: misc
+  description: Uncategorised / classifier fallback
+  tags: []

@@ -1,0 +1,647 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>bRAInZ</title>
+  <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/dompurify/dist/purify.min.js"></script>
+  <link rel="stylesheet" href="/static/app.css">
+</head>
+<body>
+
+<!-- ===== OPEN ACCESS BANNER ===== -->
+<div id="openAccessBanner" style="display:none;position:fixed;top:0;left:0;right:0;z-index:9999;
+  background:#7a5c00;color:#ffe082;padding:7px 16px;font-size:13px;text-align:center;
+  border-bottom:1px solid #a07800;">
+  ⚠ Open access mode — no API key configured. Set <code style="background:rgba(0,0,0,.25);padding:1px 5px;border-radius:3px;">API_KEYS</code> to enable authentication.
+</div>
+
+<!-- ===== AUTH ===== -->
+<div id="authOverlay">
+  <div class="auth-box">
+    <h1>bRAInZ</h1>
+    <p>Connect to your knowledge base</p>
+    <input type="text"     id="apiUrlInput" placeholder="API URL  (e.g. http://localhost:8000)" value="http://localhost:8000">
+    <input type="password" id="apiKeyInput" placeholder="API Key">
+    <button onclick="submitAuth()">Connect</button>
+    <div id="authError"></div>
+  </div>
+</div>
+
+<!-- ===== INGEST MODAL ===== -->
+<div class="modal-overlay hidden" id="ingestModal">
+  <div class="modal">
+    <h3>Add to Knowledge Base</h3>
+    <div class="modal-tabs">
+      <div class="modal-tab active" onclick="switchIngestTab('url')">URL</div>
+      <div class="modal-tab"        onclick="switchIngestTab('text')">Text Note</div>
+      <div class="modal-tab"        onclick="switchIngestTab('pdf')">PDF</div>
+      <div class="modal-tab"        onclick="switchIngestTab('image')">Image</div>
+    </div>
+
+    <!-- URL pane -->
+    <div class="modal-pane active" id="pane-url">
+      <div class="field"><label>URL</label><input type="url" id="ingestUrl" placeholder="https://…"></div>
+      <div class="field"><label>Category</label><select id="ingestUrlCat"></select></div>
+      <div class="field"><label>Tags (comma-separated)</label><input type="text" id="ingestUrlTags" placeholder="xss, jwt, active-directory"></div>
+    </div>
+
+    <!-- Text pane -->
+    <div class="modal-pane" id="pane-text">
+      <div class="field"><label>Title</label><input type="text" id="ingestTextTitle" placeholder="Note title"></div>
+      <div class="field"><label>Body</label><textarea id="ingestTextBody" placeholder="Paste or type content…"></textarea></div>
+      <div class="field"><label>Category</label><select id="ingestTextCat"></select></div>
+      <div class="field"><label>Tags (comma-separated)</label><input type="text" id="ingestTextTags"></div>
+    </div>
+
+    <!-- PDF pane -->
+    <div class="modal-pane" id="pane-pdf">
+      <div class="field"><label>PDF File</label><input type="file" id="ingestPdfFile" accept=".pdf"></div>
+      <div class="field"><label>Category</label><select id="ingestPdfCat"></select></div>
+      <div class="field"><label>Tags (comma-separated)</label><input type="text" id="ingestPdfTags"></div>
+    </div>
+
+    <!-- Image pane -->
+    <div class="modal-pane" id="pane-image">
+      <div class="field"><label>Image File</label><input type="file" id="ingestImageFile" accept=".jpg,.jpeg,.png,.gif,.webp" onchange="onIngestImageChange(this)"></div>
+      <div class="field" id="ingestImagePreviewWrap" style="display:none;"><img id="ingestImagePreview" style="max-width:100%;max-height:180px;border-radius:4px;border:1px solid var(--border);"></div>
+      <div class="field"><label>Category</label><select id="ingestImageCat"></select></div>
+      <div class="field"><label>Tags (comma-separated)</label><input type="text" id="ingestImageTags"></div>
+    </div>
+
+    <div id="ingestStatus"></div>
+    <div class="modal-actions">
+      <button class="btn" onclick="closeIngest()">Cancel</button>
+      <button class="btn primary" onclick="submitIngest()">Save</button>
+    </div>
+  </div>
+</div>
+
+<!-- ===== LIGHTBOX ===== -->
+<div id="lightbox" onclick="closeLightbox()" style="display:none;position:fixed;inset:0;z-index:9999;background:rgba(0,0,0,0.85);cursor:zoom-out;align-items:center;justify-content:center;">
+  <img id="lightboxImg" style="max-width:90vw;max-height:90vh;border-radius:6px;box-shadow:0 8px 40px rgba(0,0,0,0.6);user-select:none;">
+</div>
+
+<!-- ===== EDIT MODAL ===== -->
+<div class="modal-overlay hidden" id="editModal">
+  <div class="modal" id="editModalInner">
+    <h3>Edit Item</h3>
+    <div class="field"><label>Title</label><input type="text" id="editTitle"></div>
+    <div class="field"><label>Category</label><select id="editCategory"></select></div>
+    <div class="field"><label>Tags</label>
+      <div class="tag-editor" id="tagEditor" onclick="document.getElementById('tagInput').focus()">
+        <input class="tag-input" id="tagInput" type="text" autocomplete="off"
+               list="editTagSuggestions" placeholder="Add tag…"
+               oninput="onTagInput(this)" onkeydown="onTagKeydown(event)"
+               onchange="onTagChange(this)">
+      </div>
+      <datalist id="editTagSuggestions"></datalist>
+      <div id="categoryTagPills" style="display:none;flex-wrap:wrap;gap:4px;margin-top:6px;"></div>
+    </div>
+    <!-- Tag Suggester -->
+    <details id="tagSuggester" style="margin-top:12px;">
+      <summary style="cursor:pointer;font-size:12px;color:var(--dim);user-select:none;">
+        Suggest tags from document…
+      </summary>
+      <div style="margin-top:8px;display:flex;flex-direction:column;gap:6px;">
+        <p style="font-size:11px;color:var(--dim);line-height:1.5;">
+          Select the appropriate category above, then click <strong style="color:var(--text);">Ask AI</strong> to get tag suggestions based on this document's content.
+        </p>
+        <div style="display:flex;gap:6px;align-items:center;">
+          <button class="btn" id="suggestBtn" onclick="suggestTags()" style="white-space:nowrap;font-size:12px;padding:5px 10px;">Ask AI</button>
+          <span id="suggestSpinner" style="display:none;font-size:12px;color:var(--dim);">
+            <span class="spinner"></span> Asking AI…
+          </span>
+        </div>
+        <div id="suggestResults" style="display:none;flex-wrap:wrap;gap:5px;"></div>
+      </div>
+    </details>
+
+    <div class="modal-actions" style="margin-top:12px;">
+      <button class="btn" onclick="closeEdit()">Cancel</button>
+      <button class="btn primary" onclick="saveEdit()">Save</button>
+    </div>
+  </div>
+</div>
+
+<!-- ===== DIGEST IMPORT MODAL ===== -->
+<div class="modal-overlay hidden" id="digestImportModal">
+  <div class="modal" style="width:680px;max-width:96vw;max-height:90vh;display:flex;flex-direction:column;">
+    <h3>Import from Git Repo</h3>
+    <!-- Step 1: URL entry -->
+    <div id="digestImportStep1">
+      <div class="field">
+        <label>Git repository URL</label>
+        <input type="text" id="digestImportUrl" placeholder="https://github.com/user/repo" style="width:100%;">
+      </div>
+      <div style="display:flex;gap:8px;margin-top:4px;">
+        <button class="btn" id="digestImportFetchBtn" onclick="digestImportFetch()">Fetch</button>
+        <button class="btn" onclick="closeDigestImport()">Cancel</button>
+      </div>
+      <div id="digestImportFetchStatus" style="margin-top:8px;font-size:12px;color:var(--dim);"></div>
+    </div>
+    <!-- Step 2: file selection -->
+    <div id="digestImportStep2" style="display:none;flex:1;overflow:hidden;flex-direction:column;">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;flex-shrink:0;">
+        <span id="digestImportRepoTitle" style="font-weight:600;font-size:14px;"></span>
+        <span style="font-size:12px;color:var(--dim);">
+          <a href="#" onclick="digestImportSelectAll(true);return false;" style="color:var(--hi);">All</a> /
+          <a href="#" onclick="digestImportSelectAll(false);return false;" style="color:var(--hi);">None</a>
+          &nbsp;·&nbsp;<span id="digestImportSelCount">0 selected</span>
+        </span>
+      </div>
+      <div id="digestImportFileList" style="flex:1;overflow-y:auto;border:1px solid var(--border);border-radius:4px;padding:4px 0;min-height:200px;max-height:400px;"></div>
+      <div style="display:flex;gap:8px;margin-top:10px;flex-shrink:0;align-items:center;">
+        <button class="btn primary" id="digestImportRunBtn" onclick="digestImportRun()">Import Selected</button>
+        <button class="btn" onclick="digestImportReset()">← Back</button>
+        <button class="btn" onclick="closeDigestImport()">Cancel</button>
+        <span id="digestImportRunStatus" style="font-size:12px;color:var(--dim);margin-left:4px;"></span>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ===== DIGEST PAGE EDIT MODAL ===== -->
+<div class="modal-overlay hidden" id="wikiEditModal">
+  <div class="modal" id="wikiEditModalInner">
+    <h3>Edit Wiki Page</h3>
+    <div class="field" style="flex-shrink:0;"><label>Title</label><input type="text" id="wikiModalTitle"></div>
+    <div style="display:flex;gap:10px;flex-shrink:0;">
+      <div class="field" style="flex:1;">
+        <label>Category</label>
+        <select id="wikiModalCategory"></select>
+      </div>
+      <div class="field" style="flex:2;">
+        <label>Tags</label>
+        <div class="tag-editor" id="wikiModalTagEditor" onclick="document.getElementById('wikiModalTagInput').focus()">
+          <input class="tag-input" id="wikiModalTagInput" type="text" autocomplete="off"
+                 list="wikiModalTagSuggestions" placeholder="Add tag…"
+                 oninput="wikiModalOnTagInput(this)" onkeydown="wikiModalOnTagKeydown(event)"
+                 onchange="wikiModalOnTagChange(this)">
+        </div>
+        <datalist id="wikiModalTagSuggestions"></datalist>
+        <div id="wikiModalCatTagPills" style="display:none;flex-wrap:wrap;gap:4px;margin-top:6px;"></div>
+      </div>
+    </div>
+    <!-- AI Tag Suggester -->
+    <details id="wikiTagSuggester" style="flex-shrink:0;margin-bottom:8px;">
+      <summary style="cursor:pointer;font-size:12px;color:var(--dim);user-select:none;">
+        Suggest tags from document…
+      </summary>
+      <div style="margin-top:8px;display:flex;flex-direction:column;gap:6px;">
+        <div style="display:flex;gap:6px;align-items:center;">
+          <button class="btn" id="wikiSuggestBtn" onclick="wikiSuggestTags()" style="white-space:nowrap;font-size:12px;padding:5px 10px;">Ask AI</button>
+          <span id="wikiSuggestSpinner" style="display:none;font-size:12px;color:var(--dim);"><span class="spinner"></span> Asking AI…</span>
+        </div>
+        <div id="wikiSuggestResults" style="display:none;flex-wrap:wrap;gap:5px;"></div>
+      </div>
+    </details>
+    <div class="field" style="flex:1;display:flex;flex-direction:column;min-height:0;">
+      <label>Content (Markdown)</label>
+      <textarea id="wikiModalContent"></textarea>
+    </div>
+    <div class="modal-actions" style="flex-shrink:0;margin-top:12px;">
+      <button class="btn" onclick="closeWikiEdit()">Cancel</button>
+      <button class="btn primary" onclick="saveWikiEdit()">Save</button>
+    </div>
+  </div>
+</div>
+
+<!-- ===== HEADER ===== -->
+<header>
+  <div class="logo">bRAInZ</div>
+  <div class="header-search">
+    <input type="text" id="searchInput" placeholder="Search library, tools…" oninput="debounceSearch()">
+  </div>
+  <div class="header-actions">
+    <span class="header-stats" id="statsBar">—</span>
+    <select id="themePicker" onchange="setTheme(this.value)" title="Color theme"
+      style="background:var(--bg3);border:1px solid var(--border2);color:var(--dim);border-radius:4px;font-size:12px;padding:4px 6px;cursor:pointer;outline:none;">
+      <option value="default">Default</option>
+      <option value="monokai">Monokai</option>
+      <option value="monokai-dark">Monokai Dark</option>
+      <option value="gruvbox">Gruvbox</option>
+      <option value="gruvbox-hard">Gruvbox Dark Hard</option>
+      <option value="solarized">Solarized</option>
+      <option value="solarized-dark">Solarized Dark</option>
+      <option value="dracula">Dracula</option>
+      <option value="dracula-dark">Dracula Dark</option>
+    </select>
+    <button class="hdr-btn" id="reindexBtn" onclick="reindex()" title="Rebuild vector index">⟳ Reindex</button>
+  </div>
+</header>
+
+<!-- ===== BODY ===== -->
+<div class="app-body">
+
+  <!-- ===== LEFT NAV ===== -->
+  <nav id="nav">
+
+    <!-- Views -->
+    <div class="nav-section">
+      <div class="nav-section-header" onclick="toggleSection(this)">
+        Views <span class="chevron">▾</span>
+      </div>
+      <div class="nav-section-body">
+        <div class="nav-view-item active" data-view="library" onclick="switchView('library')">
+          <span class="icon">📚</span> Library
+        </div>
+        <div class="nav-view-item" data-view="followup" onclick="switchView('followup')">
+          <span class="icon">🔖</span> Followup
+          <span id="followupBadge" style="display:none;margin-left:auto;font-size:10px;background:var(--hi);color:#fff;border-radius:10px;padding:1px 6px;"></span>
+        </div>
+        <div class="nav-view-item" data-view="digest" onclick="switchView('digest')">
+          <span class="icon">📝</span> Digest
+        </div>
+        <div class="nav-view-item" data-view="tools" onclick="switchView('tools')">
+          <span class="icon">⭐</span> Tools
+        </div>
+        <div class="nav-view-item" data-view="query" onclick="switchView('query')">
+          <span class="icon">💬</span> Query
+        </div>
+        <div class="nav-view-item" data-view="rss" onclick="switchView('rss')">
+          <span class="icon">📡</span> RSS
+          <span id="rssNavBadge" class="nav-unread-badge" style="display:none"></span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Categories -->
+    <div class="nav-section" id="navCatSection">
+      <div class="nav-section-header" onclick="toggleSection(this)">
+        Categories <span class="chevron">▾</span>
+      </div>
+      <div class="nav-section-body">
+        <div class="nav-item active" data-cat="" onclick="selectCategory('')">
+          All <span class="nav-cnt" id="totalCnt">0</span>
+        </div>
+        <div id="catList"></div>
+      </div>
+    </div>
+
+    <!-- Tags (top 15 used) — library view -->
+    <div class="nav-section" id="navTagSection">
+      <div class="nav-section-header" onclick="toggleSection(this)">
+        Top Tags <span class="chevron">▾</span>
+      </div>
+      <div class="nav-section-body" id="tagList"></div>
+    </div>
+
+    <!-- Topics — tools view -->
+    <div class="nav-section" id="navToolTopicSection" style="display:none;">
+      <div class="nav-section-header" onclick="toggleSection(this)">
+        Topics <span class="chevron">▾</span>
+      </div>
+      <div class="nav-section-body" id="toolTopicList"></div>
+    </div>
+
+    <!-- Categories — digest view -->
+    <div class="nav-section" id="navWikiCatSection" style="display:none;">
+      <div class="nav-section-header" onclick="toggleSection(this)">
+        Categories <span class="chevron">▾</span>
+      </div>
+      <div class="nav-section-body">
+        <div class="nav-item active" id="digestNavAll" onclick="selectDigestCategory('')">All</div>
+        <div id="digestCatList"></div>
+      </div>
+    </div>
+
+    <!-- Tags — digest view -->
+    <div class="nav-section" id="navWikiTagSection" style="display:none;">
+      <div class="nav-section-header" onclick="toggleSection(this)">
+        Tags <span class="chevron">▾</span>
+      </div>
+      <div class="nav-section-body" id="digestTagList"></div>
+    </div>
+
+  </nav>
+
+  <div class="resize-handle" id="resizeNav" title="Drag to resize"></div>
+
+  <!-- ===== CONTENT AREA ===== -->
+  <div class="content-area">
+
+    <!-- Item list (library view) -->
+    <div id="listPanel">
+      <div class="list-toolbar">
+        <span id="listCount">0 items</span>
+        <span style="color:var(--border2);margin:0 4px;">·</span>
+        <span id="listViewLabel" style="color:var(--hi);">All</span>
+        <button class="hdr-btn" onclick="openIngest()" style="margin-left:auto;background:#2d6a2d;">+ Add</button>
+      </div>
+      <div id="itemScroll">
+        <div id="listLoading">Loading…</div>
+        <div id="listEmpty">No items found</div>
+      </div>
+    </div>
+
+    <div class="resize-handle" id="resizeList" title="Drag to resize"></div>
+
+    <!-- Detail / views -->
+    <div id="detailPanel">
+      <div id="detailEmpty">Select an item</div>
+      <div id="detailContent"></div>
+
+      <!-- Metadata overlay -->
+      <div id="metaOverlay" onclick="if(event.target===this)closeMetaOverlay()">
+        <div class="meta-box">
+          <h3>Metadata <button onclick="closeMetaOverlay()">✕</button></h3>
+          <table class="meta-table"><tbody id="metaTableBody"></tbody></table>
+        </div>
+      </div>
+
+      <!-- Query + Skills tabbed view -->
+      <div id="querySkillsView">
+        <div class="qs-tab-bar">
+          <div class="qs-tab active" id="qsTabQuery" onclick="switchQsTab('query')">💬 Query</div>
+          <div class="qs-tab" id="qsTabSkills" onclick="switchQsTab('skills')">⚡ Skills</div>
+          <div class="qs-tab" id="qsTabPlanner" onclick="switchQsTab('planner')">🗺 Planner</div>
+        </div>
+
+        <!-- Query pane -->
+        <div class="qs-pane active" id="qsQueryPane">
+          <h2>Ask your Knowledge Base</h2>
+          <div class="query-filter">
+            Scope:
+            <select id="queryCatFilter">
+              <option value="">All categories</option>
+            </select>
+            Model:
+            <select id="queryModelSelect" title="Query model"></select>
+          </div>
+          <div class="query-row">
+            <input type="text" id="queryInput" placeholder="Ask anything about your security research…"
+                   onkeydown="if(event.key==='Enter')runQuery()">
+            <button class="btn primary" onclick="runQuery()">Ask</button>
+          </div>
+          <div id="queryAnswer">Your answer will appear here.</div>
+          <div id="querySources"></div>
+          <div id="queryTools"></div>
+        </div>
+
+        <!-- Skills pane -->
+        <div class="qs-pane" id="qsSkillsPane">
+          <h2>Generate Skill Reference</h2>
+          <div class="skills-generate">
+            <div class="field">
+              <label>Topic</label>
+              <input type="text" id="skillTopic" placeholder="e.g. kerberoasting, jwt attacks, ble sniffing">
+            </div>
+            <div class="field">
+              <label>Description (optional)</label>
+              <textarea id="skillDesc" placeholder="Additional context for the generator…"></textarea>
+            </div>
+            <div class="field">
+              <label>Restrict to category (optional)</label>
+              <select id="skillCat"><option value="">All categories</option></select>
+            </div>
+            <div><button class="btn primary" onclick="generateSkill()">Generate SKILL.md</button></div>
+          </div>
+          <div id="skillOutput" style="display:none"></div>
+
+          <h2 style="margin-top:8px">Saved Skills</h2>
+          <div class="skill-list" id="skillList"></div>
+        </div>
+
+        <!-- Planner pane -->
+        <div class="qs-pane" id="qsPlannerPane">
+          <h2>Pentest Planner</h2>
+          <div class="skills-generate">
+            <div class="field">
+              <label>Engagement Description</label>
+              <textarea id="plannerInput" placeholder="Describe the engagement: target, type, scope, known intel…&#10;&#10;Example:&#10;Target: Acme Corp internal network&#10;Type: Active Directory red team&#10;Scope: 10.0.0.0/8, no production databases&#10;Intel: Exchange 2016, domain controller at 10.1.1.1, Kerberos enabled" style="min-height:120px;font-family:inherit;"></textarea>
+            </div>
+            <div><button class="btn primary" onclick="generatePlan(this)">Generate Plan</button></div>
+          </div>
+          <div id="plannerStatus" style="display:none;padding:8px 0;font-size:12px;color:var(--dim);"></div>
+          <div id="plannerOutput" style="display:none;margin-top:4px;"></div>
+
+          <h2 style="margin-top:16px">Saved Plans</h2>
+          <div id="plannerList" style="display:flex;flex-direction:column;gap:6px;"></div>
+        </div>
+      </div>
+
+    </div><!-- /detailPanel -->
+
+    <!-- RSS view — full width inside content-area -->
+    <div id="rssViewWrapper" style="display:none;flex:1;overflow:hidden;">
+    <div style="display:flex;height:100%;overflow:hidden;">
+
+    <!-- Feed list panel -->
+    <div class="rss-feeds-panel">
+      <div class="rss-toolbar" style="justify-content:space-between;">
+        <button class="btn" onclick="toggleAddFeedForm()" style="font-size:12px;padding:5px 10px;">+ Add Feed</button>
+        <button class="btn" onclick="markAllFeedsRead(this)" style="font-size:12px;padding:5px 10px;">✓ All read</button>
+        <button id="rssFilterBtn" onclick="toggleFeedFilter()" style="font-size:11px;padding:4px 9px;background:var(--bg3);border:1px solid var(--border2);color:var(--dim);border-radius:4px;cursor:pointer;">Show all</button>
+        <input type="file" id="opmlFileInput" accept=".opml,.xml" style="display:none" onchange="handleOPMLFile(this)">
+      </div>
+      <!-- Search/filter bar -->
+      <div style="padding:6px 10px;border-bottom:1px solid var(--border);background:var(--bg2);">
+        <input id="rssFeedSearch" type="search" placeholder="Filter feeds…"
+          oninput="renderFeedList()"
+          style="width:100%;box-sizing:border-box;background:var(--bg3);border:1px solid var(--border2);color:var(--text);border-radius:4px;font-size:12px;padding:4px 8px;outline:none;">
+      </div>
+      <!-- Inline add-feed form -->
+      <div id="rssAddFormInline" style="display:none;padding:10px 12px;border-bottom:1px solid var(--border);background:var(--bg2);">
+        <div style="display:flex;gap:6px;">
+          <input type="url" id="rssAddUrl" placeholder="Feed URL (https://…)"
+            style="flex:1;background:var(--bg3);border:1px solid var(--border2);color:var(--text);border-radius:4px;font-size:12px;padding:5px 8px;outline:none;"
+            onkeydown="if(event.key==='Enter')submitAddFeed()">
+          <button class="btn primary" onclick="submitAddFeed()" style="font-size:12px;padding:5px 10px;white-space:nowrap;">Add</button>
+          <button class="btn" onclick="toggleAddFeedForm()" style="font-size:12px;padding:5px 8px;">✕</button>
+        </div>
+        <div id="rssAddStatus" style="font-size:11px;min-height:14px;margin-top:4px;color:var(--dim);"></div>
+      </div>
+      <div class="rss-feed-list" id="rssFeedList">
+        <div class="rss-empty" id="rssFeedEmpty">No feeds added yet</div>
+      </div>
+      <div style="display:flex;border-top:1px solid var(--border);flex-shrink:0;">
+        <div class="rss-settings-btn" style="flex:1;border-top:none;" onclick="refreshAllFeeds(this)">↻ Refresh all</div>
+        <div class="rss-settings-btn" style="flex:1;border-top:none;border-left:1px solid var(--border);" onclick="showRssSettings()">⚙ Settings</div>
+      </div>
+    </div>
+
+    <!-- Entry preview panel -->
+    <div class="rss-entries-panel" id="rssEntriesPanel">
+      <div class="rss-empty" id="rssSelectPrompt">Select a feed to preview entries</div>
+      <div id="rssEntriesContent" style="display:none;flex:1;overflow:hidden;flex-direction:column;">
+        <div class="rss-entries-header">
+          <span style="display:flex;align-items:center;gap:6px;min-width:0;flex:1;">
+            <span class="rss-entries-title" id="rssEntriesFeedTitle" style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;"></span>
+            <button class="rss-icon-btn" id="rssRenameFeedBtn" onclick="startRenameFeed()" title="Rename feed" style="display:none;flex-shrink:0;">✏️</button>
+          </span>
+          <span style="display:flex;align-items:center;gap:6px;flex-shrink:0;">
+            <span class="rss-entries-count" id="rssEntriesCount"></span>
+            <button class="btn" id="rssMarkAllReadBtn" onclick="markAllRead()" style="font-size:11px;padding:4px 9px;">Mark all read</button>
+            <button class="btn" id="rssIngestAllBtn" onclick="ingestAllEntries()" style="font-size:11px;padding:4px 9px;">Add All to Library</button>
+          </span>
+        </div>
+        <div class="rss-entry-list" id="rssEntryList"></div>
+      </div>
+
+      <!-- Settings panel (shown instead of entries) -->
+      <div id="rssSettingsPanel">
+        <h3 style="font-size:14px;font-weight:700;color:var(--hi);margin-bottom:12px;">RSS Settings</h3>
+
+        <!-- Refresh interval -->
+        <div style="margin-bottom:16px;">
+          <h4 style="font-size:13px;font-weight:600;color:var(--text);margin-bottom:8px;">Auto-refresh interval</h4>
+          <div style="display:flex;align-items:center;gap:8px;">
+            <input type="number" id="rssIntervalInput" min="1" max="1440"
+              style="width:80px;background:var(--bg3);border:1px solid var(--border2);color:var(--text);border-radius:4px;font-size:12px;padding:5px 8px;outline:none;"
+              onkeydown="if(event.key==='Enter')saveRefreshInterval()">
+            <span style="font-size:12px;color:var(--dim);">minutes</span>
+            <button class="btn" onclick="saveRefreshInterval()" style="font-size:12px;">Save</button>
+            <span id="rssIntervalStatus" style="font-size:11px;color:var(--success);min-width:40px;"></span>
+          </div>
+        </div>
+
+        <!-- OPML -->
+        <div style="margin-bottom:16px;">
+          <h4 style="font-size:13px;font-weight:600;color:var(--text);margin-bottom:8px;">OPML</h4>
+          <div class="rss-opml-row">
+            <button class="btn" onclick="importOPML()" style="font-size:12px;">Import OPML</button>
+            <button class="btn" onclick="exportOPML()" style="font-size:12px;">Export OPML</button>
+          </div>
+        </div>
+
+        <!-- Feed table -->
+        <div>
+          <h4 style="font-size:13px;font-weight:600;color:var(--text);margin-bottom:8px;">Subscriptions</h4>
+          <table class="rss-feed-table">
+            <thead><tr>
+              <th>Title</th><th>URL</th><th>Enabled</th><th></th>
+            </tr></thead>
+            <tbody id="rssSettingsTable"></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+  </div><!-- rssViewWrapper inner flex -->
+    </div><!-- /rssViewWrapper -->
+
+    <!-- ===== TOOLS VIEW ===== -->
+    <div id="toolsViewWrapper" style="display:none;flex:1;overflow:hidden;">
+    <div style="display:flex;height:100%;overflow:hidden;">
+
+      <!-- Left: repo list -->
+      <div class="rss-feeds-panel">
+        <div class="rss-toolbar" style="gap:6px;">
+          <input id="toolSearch" type="text" placeholder="Search repos…"
+            style="flex:1;background:var(--bg3);border:1px solid var(--border2);color:var(--text);border-radius:4px;font-size:12px;padding:4px 8px;outline:none;"
+            oninput="toolPage=0;renderToolRepoList()">
+        </div>
+        <div id="toolStatusBar" style="display:none;padding:5px 10px;font-size:11px;color:var(--dim);background:var(--bg2);border-bottom:1px solid var(--border);flex-shrink:0;"></div>
+        <div id="toolRepoListPanel" class="rss-feed-list"></div>
+        <div id="toolPagination" style="display:none;flex-shrink:0;border-top:1px solid var(--border);padding:6px 8px;display:flex;align-items:center;justify-content:space-between;gap:6px;font-size:11px;color:var(--dim);">
+          <button id="toolPagePrev" class="rss-icon-btn" onclick="toolChangePage(-1)">◀</button>
+          <span id="toolPageInfo"></span>
+          <button id="toolPageNext" class="rss-icon-btn" onclick="toolChangePage(1)">▶</button>
+        </div>
+        <div style="display:flex;border-top:1px solid var(--border);flex-shrink:0;">
+          <div class="rss-settings-btn" onclick="refreshToolsNow(this)" style="flex:1;">↻ Refresh</div>
+          <div class="rss-settings-btn" onclick="showToolsSettings()" style="flex:1;border-left:1px solid var(--border);">⚙ Settings</div>
+        </div>
+      </div>
+
+      <!-- Right: repo detail / settings -->
+      <div class="rss-entries-panel" style="flex-direction:column;">
+        <div class="rss-empty" id="toolSelectPrompt">Select a repo to view details</div>
+
+        <!-- Repo detail pane -->
+        <div id="toolDetailPane" style="display:none;flex:1;flex-direction:column;overflow:hidden;">
+          <div class="rss-entries-header" style="flex-shrink:0;">
+            <span class="rss-entries-title" id="toolDetailTitle">—</span>
+            <button class="btn" id="toolFollowupBtn" onclick="toggleToolFollowup(this)" style="font-size:11px;padding:4px 9px;" title="Toggle followup">🔖</button>
+            <button class="btn" id="toolDetailIngestBtn" onclick="ingestCurrentRepo(this)" style="font-size:11px;padding:4px 9px;">Ingest</button>
+          </div>
+          <div id="toolDetailContent" style="flex:1;overflow-y:auto;padding:16px 20px;display:flex;flex-direction:column;gap:10px;"></div>
+        </div>
+
+        <!-- Settings pane -->
+        <div id="toolSettingsPane" style="display:none;flex:1;overflow-y:auto;padding:20px;flex-direction:column;gap:20px;">
+          <h3 style="font-size:14px;font-weight:600;color:var(--text);margin:0;">Tools Settings</h3>
+          <div style="display:flex;flex-direction:column;gap:8px;">
+            <label style="font-size:12px;color:var(--dim);">GitHub Username(s) <span style="color:var(--muted);font-size:11px;">comma-separated</span></label>
+            <div style="display:flex;gap:8px;">
+              <input type="text" id="toolUsernameInput" placeholder="torvalds, octocat"
+                style="flex:1;background:var(--bg3);border:1px solid var(--border2);color:var(--text);border-radius:4px;font-size:12px;padding:5px 8px;outline:none;">
+              <button class="btn primary" onclick="saveToolsSettings()" style="font-size:12px;padding:5px 10px;">Save</button>
+            </div>
+          </div>
+          <div style="display:flex;flex-direction:column;gap:6px;">
+            <label style="font-size:12px;color:var(--dim);">GitHub Token</label>
+            <span id="toolTokenStatus" style="font-size:12px;color:var(--dim);"></span>
+            <span style="font-size:11px;color:var(--muted);">Set <code style="background:var(--bg3);padding:1px 4px;border-radius:3px;">GITHUB_TOKEN</code> in your <code style="background:var(--bg3);padding:1px 4px;border-radius:3px;">.env</code> file and restart to enable authenticated requests (5000 req/hr vs 60 without).</span>
+          </div>
+          <div style="display:flex;flex-direction:column;gap:8px;">
+            <label style="font-size:12px;color:var(--dim);">Auto-refresh interval (minutes)</label>
+            <div style="display:flex;gap:8px;">
+              <input type="number" id="toolRefreshInterval" min="1" value="1440"
+                style="width:90px;background:var(--bg3);border:1px solid var(--border2);color:var(--text);border-radius:4px;font-size:12px;padding:5px 8px;outline:none;">
+              <button class="btn primary" onclick="saveToolsSettings()" style="font-size:12px;padding:5px 10px;">Save</button>
+            </div>
+          </div>
+          <div>
+            <button class="btn primary" onclick="ingestAllToolRepos(this)" style="font-size:12px;padding:5px 12px;">Ingest All Starred</button>
+          </div>
+        </div>
+      </div>
+
+    </div><!-- tools inner flex -->
+    </div><!-- /toolsViewWrapper -->
+
+    <!-- Search results view -->
+    <div id="searchViewWrapper" style="display:none;flex:1;overflow-y:auto;padding:20px 24px;flex-direction:column;gap:20px;">
+      <div style="font-size:13px;color:var(--dim);" id="searchResultsStatus"></div>
+      <div id="searchGroupLibrary"></div>
+      <div id="searchGroupDigest"></div>
+      <div id="searchGroupTools"></div>
+    </div>
+
+    <!-- Followup / Reading list view -->
+    <div id="followupViewWrapper" style="display:none;flex:1;overflow:hidden;flex-direction:column;">
+      <div style="display:flex;height:100%;overflow:hidden;">
+        <!-- List -->
+        <div style="width:340px;flex-shrink:0;border-right:1px solid var(--border);display:flex;flex-direction:column;overflow:hidden;background:var(--bg2);">
+          <div style="padding:8px 12px;font-size:11px;color:var(--dim);border-bottom:1px solid var(--border);flex-shrink:0;display:flex;align-items:center;justify-content:space-between;">
+            <span id="followupCount">0 items</span>
+          </div>
+          <div id="followupList" style="flex:1;overflow-y:auto;"></div>
+          <div id="followupEmpty" style="display:none;padding:20px;font-size:12px;color:var(--muted);text-align:center;">No followup items</div>
+        </div>
+        <!-- Detail -->
+        <div style="flex:1;overflow-y:auto;background:var(--bg);padding:24px 24px 12px;" id="followupDetailPanel">
+          <div style="display:flex;align-items:center;justify-content:center;height:100%;color:var(--muted);font-size:13px;">Select an item</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ===== DIGEST VIEW ===== -->
+    <div id="digestViewWrapper" style="display:none;flex:1;overflow:hidden;">
+      <div style="display:flex;height:100%;overflow:hidden;">
+        <!-- Page list panel -->
+        <div style="width:300px;flex-shrink:0;border-right:1px solid var(--border);display:flex;flex-direction:column;overflow:hidden;background:var(--bg2);">
+          <div style="padding:6px 10px;border-bottom:1px solid var(--border);flex-shrink:0;display:flex;gap:6px;">
+            <button class="btn" style="flex:1;font-size:11px;padding:5px;" onclick="openDigestImport()">⬇ Import from Git</button>
+            <button class="btn" style="flex:1;font-size:11px;padding:5px;" onclick="document.getElementById('digestUploadInput').click()">⬆ Upload .md</button>
+            <input type="file" id="digestUploadInput" accept=".md" multiple style="display:none" onchange="digestUploadFiles(this.files)">
+          </div>
+          <div id="digestPageList" style="flex:1;overflow-y:auto;"></div>
+          <div id="digestPageEmpty" style="display:none;padding:20px;font-size:12px;color:var(--muted);text-align:center;">No digest pages yet.<br>Open a Library item and click 📝 Add to Digest.</div>
+        </div>
+        <!-- Page detail -->
+        <div style="flex:1;overflow-y:auto;background:var(--bg);" id="digestPageDetail">
+          <div style="display:flex;align-items:center;justify-content:center;height:100%;color:var(--muted);font-size:13px;">Select a page</div>
+        </div>
+      </div>
+    </div>
+
+  </div><!-- /content-area -->
+</div><!-- /app-body -->
+
+<script src="/static/app.js"></script>
+</body>
+</html>

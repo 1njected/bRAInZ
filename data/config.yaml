@@ -1,0 +1,59 @@
+server:
+  # Restrict CORS to specific origins. Default ("*") allows any origin.
+  # To lock down, list allowed origins explicitly, e.g.:
+  #   cors_origins:
+  #     - "http://localhost:8000"
+  #     - "chrome-extension://YOUR_EXTENSION_ID"
+  cors_origins:
+    - "*"
+feeds:
+  refresh_interval_minutes: 60
+ingestion:
+  bulk_rate_limit: 1.0
+  classifier_body_words: 400
+  max_content_length: 10000000
+  request_timeout: 30
+  user_agent: Mozilla/5.0 (compatible; bRAInZ/0.1)
+llm:
+  anthropic:
+    classification_model: claude-haiku-4-5-20251001
+    embedding_dimensions: 1024
+    embedding_model: voyage-3
+    query_model: claude-sonnet-4-6
+  ollama:
+    base_url: http://host.docker.internal:11434
+    classification_model: gemma3:12b
+    vision_model: gemma3:12b
+    classify_timeout: 120
+    embed_timeout: 120
+    embedding_dimensions: 1024
+    embedding_model: mxbai-embed-large:latest
+    embed_max_chars: 800
+    query_model: gemma4:26b
+    query_timeout: 300
+    query_num_ctx: 32768
+    query_temperature: 0.1
+    query_think: true
+  openai:
+    classification_model: gpt-4o-mini
+    embedding_dimensions: 1536
+    embedding_model: text-embedding-3-small
+    query_model: gpt-4o
+  openai_compatible:
+    api_key: lm-studio
+    base_url: http://localhost:1234/v1
+    classification_model: local-model
+    embedding_dimensions: 768
+    embedding_model: local-embed
+    query_model: local-model
+  provider: ollama
+rag:
+  chunk_overlap: 50
+  chunk_size: 400
+  default_top_k: 10
+  query_top_k: 8
+  skill_top_chunks: 50
+  reranker: flashrank
+  reranker_top_k: 5
+tools:
+  refresh_interval_minutes: 1440
