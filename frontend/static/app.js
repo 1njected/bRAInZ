@@ -3,7 +3,7 @@
 /* =====================================================================
    State
    ===================================================================== */
-let API  = localStorage.getItem('brainz_api') || 'http://localhost:8000';
+let API  = localStorage.getItem('brainz_api') || window.location.origin;
 let KEY  = localStorage.getItem('brainz_key') || '';
 let currentView     = 'library';
 let currentCategory = '';
@@ -2710,6 +2710,7 @@ loadFeeds();
 if (KEY) {
   init();
 } else {
+  document.getElementById('apiUrlInput').value = API;
   document.getElementById('authOverlay').classList.remove('hidden');
 }
 
@@ -2782,3 +2783,114 @@ if (KEY) {
     MIN_LIST, MAX_LIST, STORAGE_KEY_LIST
   );
 })();
+
+/* =====================================================================
+   Mobile — responsive push-navigation
+   ===================================================================== */
+const IS_MOBILE = window.matchMedia('(max-width:768px)').matches;
+
+if (IS_MOBILE) {
+  // Give the anonymous list-column divs stable IDs so the CSS can target them
+  const fu = document.querySelector('#followupViewWrapper > div > div:first-child');
+  if (fu) fu.id = 'followupListCol';
+  const dg = document.querySelector('#digestViewWrapper > div > div:first-child');
+  if (dg) dg.id = 'digestListCol';
+}
+
+function mobileToggleNav() {
+  document.getElementById('nav').classList.contains('open') ? mobileCloseNav() : mobileOpenNav();
+}
+
+function mobileOpenNav() {
+  document.getElementById('nav').classList.add('open');
+  document.getElementById('mobileNavBackdrop').classList.add('open');
+}
+
+function mobileCloseNav() {
+  document.getElementById('nav').classList.remove('open');
+  document.getElementById('mobileNavBackdrop').classList.remove('open');
+}
+
+function mobileGoBack() {
+  const b = document.body;
+  if (b.classList.contains('detail-open'))          { b.classList.remove('detail-open'); return; }
+  if (b.classList.contains('rss-detail-open'))      { b.classList.remove('rss-detail-open'); return; }
+  if (b.classList.contains('followup-detail-open')) { b.classList.remove('followup-detail-open'); return; }
+  if (b.classList.contains('digest-detail-open'))   { b.classList.remove('digest-detail-open'); return; }
+}
+
+if (IS_MOBILE) {
+  // switchView: clear all push-state and close nav when switching top-level views
+  const _switchView = switchView;
+  window.switchView = function(view) {
+    _switchView(view);
+    document.body.classList.remove('detail-open', 'rss-detail-open', 'followup-detail-open', 'digest-detail-open');
+    mobileCloseNav();
+  };
+
+  // renderItemList: each card tap pushes into detail
+  const _renderItemList = renderItemList;
+  window.renderItemList = function(list) {
+    _renderItemList(list);
+    document.querySelectorAll('#itemScroll .item-card').forEach(card => {
+      const orig = card.onclick;
+      card.onclick = e => { orig && orig(e); document.body.classList.add('detail-open'); };
+    });
+  };
+
+  // loadFollowup: row taps push into followup detail
+  const _loadFollowup = loadFollowup;
+  window.loadFollowup = async function() {
+    await _loadFollowup();
+    document.querySelectorAll('#followupList .item-card').forEach(row => {
+      const orig = row.onclick;
+      row.onclick = e => { orig && orig(e); document.body.classList.add('followup-detail-open'); };
+    });
+  };
+
+  // previewFeed: push into RSS entries panel
+  const _previewFeed = previewFeed;
+  window.previewFeed = async function(feedId) {
+    await _previewFeed(feedId);
+    document.body.classList.add('rss-detail-open');
+    mobileCloseNav();
+  };
+
+  // showRepoDetail: push into tools detail panel
+  const _showRepoDetail = showRepoDetail;
+  window.showRepoDetail = async function(repo) {
+    await _showRepoDetail(repo);
+    document.body.classList.add('rss-detail-open');
+    mobileCloseNav();
+  };
+
+  // loadDigestPage: push into digest page detail
+  const _loadDigestPage = loadDigestPage;
+  window.loadDigestPage = async function(pageId) {
+    await _loadDigestPage(pageId);
+    document.body.classList.add('digest-detail-open');
+    mobileCloseNav();
+  };
+
+  // Swipe gestures
+  (() => {
+    let x0 = 0, y0 = 0, tid = null;
+    document.addEventListener('touchstart', e => {
+      const t = e.changedTouches[0];
+      x0 = t.clientX; y0 = t.clientY; tid = t.identifier;
+    }, { passive: true });
+    document.addEventListener('touchend', e => {
+      const t = [...e.changedTouches].find(t => t.identifier === tid);
+      if (!t) return;
+      const dx = t.clientX - x0, dy = t.clientY - y0;
+      if (Math.abs(dy) > Math.abs(dx) * 1.5 || Math.abs(dx) < 50) return;
+      const nav = document.getElementById('nav');
+      if (dx > 0) {
+        if (x0 < 32 && !nav.classList.contains('open')) { mobileOpenNav(); return; }
+        mobileGoBack();
+      } else {
+        if (nav.classList.contains('open')) mobileCloseNav();
+      }
+    }, { passive: true });
+  })();
+}

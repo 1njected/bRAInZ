@@ -22,7 +22,7 @@
   <div class="auth-box">
     <h1>bRAInZ</h1>
     <p>Connect to your knowledge base</p>
-    <input type="text"     id="apiUrlInput" placeholder="API URL  (e.g. http://localhost:8000)" value="http://localhost:8000">
+    <input type="text"     id="apiUrlInput" placeholder="API URL">
     <input type="password" id="apiKeyInput" placeholder="API Key">
     <button onclick="submitAuth()">Connect</button>
     <div id="authError"></div>
@@ -210,6 +210,7 @@
 
 <!-- ===== HEADER ===== -->
 <header>
+  <button id="mobileMenuBtn" class="mobile-menu-btn" onclick="mobileToggleNav()" aria-label="Menu">☰</button>
   <div class="logo">bRAInZ</div>
   <div class="header-search">
     <input type="text" id="searchInput" placeholder="Search library, tools…" oninput="debounceSearch()">
@@ -234,6 +235,8 @@
 
 <!-- ===== BODY ===== -->
 <div class="app-body">
+
+  <div id="mobileNavBackdrop" onclick="mobileCloseNav()"></div>
 
   <!-- ===== LEFT NAV ===== -->
   <nav id="nav">
@@ -325,6 +328,7 @@
     <!-- Item list (library view) -->
     <div id="listPanel">
       <div class="list-toolbar">
+        <button id="mobileBackToNav" class="mobile-back-btn" onclick="mobileOpenNav()">☰</button>
         <span id="listCount">0 items</span>
         <span style="color:var(--border2);margin:0 4px;">·</span>
         <span id="listViewLabel" style="color:var(--hi);">All</span>
@@ -340,6 +344,7 @@
 
     <!-- Detail / views -->
     <div id="detailPanel">
+      <button id="mobileBackToList" class="mobile-back-btn" onclick="mobileGoBack()">← Back</button>
       <div id="detailEmpty">Select an item</div>
       <div id="detailContent"></div>
 
