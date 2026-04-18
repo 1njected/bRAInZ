@@ -38,6 +38,8 @@ async def rag_query(
         return {
             "answer": "No relevant content found in your knowledge base for this question.",
             "sources": [],
+            "tools": [],
+            "thinking": "",
         }
 
     # Build context from top results — truncate each doc to keep total context manageable

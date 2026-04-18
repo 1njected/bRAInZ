@@ -202,7 +202,8 @@ def _parse_category(raw: str, valid_categories: set[str]) -> dict:
     category = str(data.get("category", "misc")).lower().strip()
     if category not in valid_categories:
         category = "misc"
-    return {"category": category, "summary": str(data.get("summary", "")).strip()}
+    summary = data.get("summary")
+    return {"category": category, "summary": str(summary).strip() if summary is not None else ""}
 
 
 def _parse_tags(raw: str, valid_tags: set[str]) -> list[str]:
@@ -230,7 +231,11 @@ def _parse_classification(raw: str, valid_categories: set[str], valid_tags: set[
     try:
         data = json.loads(raw_clean)
         if isinstance(data, dict) and "tags" in data:
-            tags = [str(t).lower().strip() for t in (data["tags"] or []) if t]
+            raw_tags = data["tags"]
+            if not isinstance(raw_tags, list):
+                result["tags"] = []
+                return result
+            tags = [str(t).lower().strip() for t in raw_tags if t]
             if valid_tags:
                 tags = [t for t in tags if t in valid_tags]
             result["tags"] = tags[:7]

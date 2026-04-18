@@ -6,8 +6,8 @@ services:
     volumes:
       - ../backend:/app
       - ./:/tests
-      - ../data:/data
+      - ./data:/tests/data
     environment:
-      - DATA_DIR=/data
+      - DATA_DIR=/tests/data
       - API_KEYS=
     command: python -m pytest /tests/ -q --tb=short

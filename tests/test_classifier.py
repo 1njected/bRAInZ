@@ -90,3 +90,73 @@ class TestClassifyContent:
         from classifier.classify import classify_content
         result = await classify_content("Title", "Content", mock_llm)
         assert result["category"] in VALID_CATEGORIES
+
+    @pytest.mark.asyncio
+    async def test_llm_returns_invalid_category_falls_back_to_misc(self, mock_llm):
+        from classifier.classify import classify_content
+        from unittest.mock import AsyncMock
+
+        mock_llm.complete_classify = AsyncMock(
+            return_value='{"category": "totally-made-up", "tags": ["a"], "summary": "s."}'
+        )
+        result = await classify_content("Title", "Content", mock_llm)
+        assert result["category"] == "misc"
+
+    @pytest.mark.asyncio
+    async def test_llm_returns_garbage_falls_back_gracefully(self, mock_llm):
+        from classifier.classify import classify_content
+        from unittest.mock import AsyncMock
+
+        mock_llm.complete_classify = AsyncMock(return_value="not json at all <<<>>>")
+        result = await classify_content("Title", "Content", mock_llm)
+        assert result["category"] == "misc"
+        assert result["tags"] == []
+
+    @pytest.mark.asyncio
+    async def test_tags_are_list_of_strings(self, mock_llm):
+        from classifier.classify import classify_content
+        result = await classify_content("Title", "Content", mock_llm)
+        assert isinstance(result["tags"], list)
+        assert all(isinstance(t, str) for t in result["tags"])
+
+    @pytest.mark.asyncio
+    async def test_summary_is_string(self, mock_llm):
+        from classifier.classify import classify_content
+        result = await classify_content("Title", "Content", mock_llm)
+        assert isinstance(result["summary"], str)
+
+
+class TestParseClassificationEdgeCases:
+    """Additional edge cases not covered by the basic suite."""
+
+    def _parse(self, raw, valid_tags=None):
+        from classifier.classify import _parse_classification
+        return _parse_classification(raw, VALID_CATEGORIES, valid_tags or set())
+
+    def test_extra_whitespace_in_json(self):
+        raw = '\n  \n  {"category":  "appsec" , "tags":["xss"],"summary":"s."}  \n'
+        result = self._parse(raw)
+        assert result["category"] == "appsec"
+
+    def test_tags_filtered_to_valid_set(self):
+        valid_tags = {"xss", "sqli"}
+        raw = '{"category": "appsec", "tags": ["xss", "unknowntag", "sqli"], "summary": "s."}'
+        result = self._parse(raw, valid_tags=valid_tags)
+        # Tags outside the valid set should be excluded
+        assert all(t in valid_tags for t in result["tags"])
+
+    def test_category_case_insensitive(self):
+        raw = '{"category": "APPSEC", "tags": [], "summary": "s."}'
+        result = self._parse(raw)
+        assert result["category"] == "appsec"
+
+    def test_null_summary_returns_empty_string(self):
+        raw = '{"category": "appsec", "tags": [], "summary": null}'
+        result = self._parse(raw)
+        assert result["summary"] == ""
+
+    def test_numeric_tags_skipped(self):
+        raw = '{"category": "misc", "tags": [1, 2, "real-tag"], "summary": "."}'
+        result = self._parse(raw)
+        # Numeric entries should not appear as-is
+        assert all(isinstance(t, str) for t in result["tags"])

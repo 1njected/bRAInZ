@@ -5,8 +5,12 @@ This project is in early development, do not expose towards hostile environments
 
 A private knowledge engine that turns saved articles, PDFs, and notes into a searchable AI corpus.
 
-![](docs/brainz-screeenshot.png)
+![](docs/images/brainz-screeenshot.png)
 
+
+|iOS WebSite Shortcut:| |
+|:-----------|:-------------|
+| <img src="docs/images/ios1.png" alt="Alt Text" width="300"> |  <img src="docs/images/ios2.png" alt="Alt Text" width="300">|
 ---
 
 ## Features

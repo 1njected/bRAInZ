@@ -58,16 +58,16 @@ class TestChunkText:
         chunks = chunk_text("", chunk_size=500, overlap=50)
         assert chunks == []
 
-    def test_chunk_item_saves_json(self, data_dir):
+    @pytest.mark.asyncio
+    async def test_chunk_item_saves_json(self, data_dir):
         from storage.index import ItemIndex
         from storage.filesystem import save_item
         from rag.chunker import chunk_item
 
         idx = ItemIndex(data_dir)
-        import asyncio
-        asyncio.get_event_loop().run_until_complete(idx.load())
+        await idx.load()
 
-        item_id = save_item(
+        item_id = await save_item(
             {"title": "Test", "category": "appsec", "tags": [], "source": "test", "content_type": "text", "summary": "", "classified_by": ""},
             "Paragraph one.\n\nParagraph two.\n\nParagraph three.",
             idx, data_dir,
@@ -96,7 +96,7 @@ class TestEmbedder:
 
         idx = ItemIndex(data_dir)
         await idx.load()
-        item_id = save_item(
+        item_id = await save_item(
             {"title": "Embed Test", "category": "netsec", "tags": [], "source": "test", "content_type": "text", "summary": "", "classified_by": ""},
             "Paragraph one about networks.\n\nParagraph two about pivoting.",
             idx, data_dir,
@@ -116,7 +116,7 @@ class TestEmbedder:
 
         idx = ItemIndex(data_dir)
         await idx.load()
-        item_id = save_item(
+        item_id = await save_item(
             {"title": "Embed Test", "category": "netsec", "tags": [], "source": "test", "content_type": "text", "summary": "", "classified_by": ""},
             "Content about network security.\n\nMore content.",
             idx, data_dir,
@@ -126,20 +126,13 @@ class TestEmbedder:
         assert idx.get(item_id)["embedded"] is True
 
     @pytest.mark.asyncio
-    async def test_embed_item_without_chunks_returns_false(self, data_dir, mock_llm):
+    async def test_embed_unknown_item_returns_false(self, data_dir, mock_llm):
         from storage.index import ItemIndex
-        from storage.filesystem import save_item
         from rag.embedder import embed_item
 
         idx = ItemIndex(data_dir)
         await idx.load()
-        item_id = save_item(
-            {"title": "No Chunks", "category": "misc", "tags": [], "source": "test", "content_type": "text", "summary": "", "classified_by": ""},
-            "Content.",
-            idx, data_dir,
-        )
-        # Don't chunk — embed_item should return False gracefully
-        ok = await embed_item(item_id, mock_llm, idx, data_dir)
+        ok = await embed_item("nonexistent-id", mock_llm, idx, data_dir)
         assert ok is False
 
     @pytest.mark.asyncio
@@ -151,7 +144,7 @@ class TestEmbedder:
 
         idx = ItemIndex(data_dir)
         await idx.load()
-        item_id = save_item(
+        item_id = await save_item(
             {"title": "Vec Test", "category": "appsec", "tags": [], "source": "test", "content_type": "text", "summary": "", "classified_by": ""},
             "Web security content.\n\nMore paragraphs here.",
             idx, data_dir,
@@ -161,7 +154,7 @@ class TestEmbedder:
 
         embed_dir = data_dir / "embeddings"
         assert (embed_dir / "index.npz").exists()
-        assert (embed_dir / "chunk_map.json").exists()
+        assert (embed_dir / "item_map.json").exists()
 
 
 # ---------------------------------------------------------------------------
@@ -170,22 +163,22 @@ class TestEmbedder:
 
 class TestVectorIndex:
     def _build_index(self, data_dir, n_items=3, dims=4):
-        """Helper: manually write index.npz + chunk_map.json."""
+        """Helper: manually write index.npz + item_map.json."""
         import numpy as np
         embed_dir = data_dir / "embeddings"
         embed_dir.mkdir(exist_ok=True)
 
         vectors = []
-        chunk_map = []
+        item_map = []
         for i in range(n_items):
             v = np.zeros(dims, dtype=np.float32)
             v[i % dims] = 1.0  # orthogonal unit vectors
             vectors.append(v)
-            chunk_map.append({"item_id": f"item{i}", "chunk_index": 0})
+            item_map.append(f"item{i}")
 
         combined = np.stack(vectors)
         np.savez_compressed(embed_dir / "index.npz", embeddings=combined)
-        (embed_dir / "chunk_map.json").write_text(json.dumps(chunk_map))
+        (embed_dir / "item_map.json").write_text(json.dumps(item_map))
 
     def test_load_sets_is_loaded(self, data_dir):
         from rag.search import VectorIndex
@@ -210,13 +203,25 @@ class TestVectorIndex:
         assert len(results) <= 2
 
     def test_search_best_match_first(self, data_dir):
+        import numpy as np
+        embed_dir = data_dir / "embeddings"
+        embed_dir.mkdir(exist_ok=True)
+        # item0: [0.9, 0.1, 0, 0] (closer to query), item1: [0.6, 0.8, 0, 0]
+        v0 = np.array([0.9, 0.1, 0.0, 0.0], dtype=np.float32)
+        v0 /= np.linalg.norm(v0)
+        v1 = np.array([0.6, 0.8, 0.0, 0.0], dtype=np.float32)
+        v1 /= np.linalg.norm(v1)
+        combined = np.stack([v0, v1])
+        np.savez_compressed(embed_dir / "index.npz", embeddings=combined)
+        import json
+        (embed_dir / "item_map.json").write_text(json.dumps(["item0", "item1"]))
+
         from rag.search import VectorIndex
-        self._build_index(data_dir, n_items=3)
         vi = VectorIndex(data_dir)
         vi.load()
-        # Query aligned with item0's vector [1,0,0,0]
         query = [1.0, 0.0, 0.0, 0.0]
         results = vi.search(query, top_k=3)
+        assert len(results) >= 2
         assert results[0]["item_id"] == "item0"
         assert results[0]["score"] > results[1]["score"]
 
@@ -238,5 +243,4 @@ class TestVectorIndex:
         results = vi.search([1.0, 0.0, 0.0, 0.0], top_k=2)
         for r in results:
             assert "item_id" in r
-            assert "chunk_index" in r
             assert "score" in r

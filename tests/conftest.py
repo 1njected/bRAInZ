@@ -2,12 +2,14 @@
 
 import asyncio
 import os
+import shutil
 import sys
-import tempfile
+import uuid
 from pathlib import Path
 from unittest.mock import AsyncMock, MagicMock
 
 import pytest
+import pytest_asyncio
 
 # Make backend importable
 sys.path.insert(0, str(Path(__file__).parent.parent / "backend"))
@@ -17,24 +19,51 @@ PDF_SMALL = TESTDATA / "MS-IR-Guidebook-Final.pdf"
 PDF_MEDIUM = TESTDATA / "abusing_wcf_endpoints.pdf"
 PDF_LARGE = TESTDATA / "TrimarcBlogPost - Owner or Pwned.pdf"
 
+# Base directory for test data — kept inside the tests/ tree so it maps
+# cleanly to the Docker volume mount (./data:/tests/data).
+_TESTS_DATA_BASE = Path(__file__).parent / "data"
+
+
+# ---------------------------------------------------------------------------
+# Session-level cleanup: wipe all test data before the run starts
+# ---------------------------------------------------------------------------
+
+@pytest.fixture(scope="session", autouse=True)
+def _clean_test_data_dir():
+    if _TESTS_DATA_BASE.exists():
+        shutil.rmtree(_TESTS_DATA_BASE, ignore_errors=True)
+    _TESTS_DATA_BASE.mkdir(parents=True, exist_ok=True)
+    yield
+    if _TESTS_DATA_BASE.exists():
+        shutil.rmtree(_TESTS_DATA_BASE, ignore_errors=True)
+
 
 # ---------------------------------------------------------------------------
 # Temp data directory
 # ---------------------------------------------------------------------------
 
 @pytest.fixture()
-def data_dir(tmp_path):
-    """Temporary /data directory with minimal config."""
-    (tmp_path / "library").mkdir()
-    (tmp_path / "embeddings").mkdir()
-    (tmp_path / "skills").mkdir()
-    (tmp_path / "inbox").mkdir()
+def data_dir():
+    """Isolated data directory under tests/data/<uuid>/."""
+    run_dir = _TESTS_DATA_BASE / uuid.uuid4().hex
+    run_dir.mkdir(parents=True)
+    (run_dir / "library").mkdir()
+    (run_dir / "embeddings").mkdir()
+    (run_dir / "skills").mkdir()
+    (run_dir / "inbox").mkdir()
     # Point config module at the temp dir
-    os.environ["DATA_DIR"] = str(tmp_path)
-    yield tmp_path
-    # Reset so config is reloaded next test
+    os.environ["DATA_DIR"] = str(run_dir)
     import config
     config._config = None
+    config._taxonomy = None
+    config._taxonomy_mtime = None
+    yield run_dir
+    # Cleanup and reset so config is reloaded next test
+    shutil.rmtree(run_dir, ignore_errors=True)
+    import config
+    config._config = None
+    config._taxonomy = None
+    config._taxonomy_mtime = None
 
 
 # ---------------------------------------------------------------------------
@@ -60,6 +89,13 @@ def mock_llm():
             '"summary": "A guide to network attacks."}'
         )
 
+    async def _complete_with_thinking(system, prompt, max_tokens=4096):
+        return (
+            '{"category": "netsec", "tags": ["mitm", "pivoting"], '
+            '"summary": "A guide to network attacks."}',
+            "",
+        )
+
     async def _embed(texts):
         # Return tiny normalised vectors
         import math
@@ -69,6 +105,7 @@ def mock_llm():
 
     llm.complete = _complete
     llm.complete_classify = _complete_classify
+    llm.complete_with_thinking = _complete_with_thinking
     llm.embed = _embed
     return llm
 
@@ -77,7 +114,7 @@ def mock_llm():
 # Populated ItemIndex
 # ---------------------------------------------------------------------------
 
-@pytest.fixture()
+@pytest_asyncio.fixture()
 async def index(data_dir):
     from storage.index import ItemIndex
     idx = ItemIndex(data_dir)
@@ -96,6 +133,7 @@ def api_client(data_dir, mock_llm):
     import api as api_module
 
     api_module._llm = mock_llm
+    api_module.DATA_DIR = data_dir
 
     from storage.index import ItemIndex
     idx = ItemIndex(data_dir)
