@@ -254,6 +254,7 @@ categories:
   - integer underflow
   - firmware-analysis
   - binary-analysis
+  - gdb
 - name: rf
   description: Radio/SDR, BLE, Zigbee, RFID, NFC, GPS spoofing
   tags:

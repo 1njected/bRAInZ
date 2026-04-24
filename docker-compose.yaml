@@ -11,6 +11,7 @@ services:
       - API_KEYS=${API_KEYS}
       - ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY:-}
       - OPENAI_API_KEY=${OPENAI_API_KEY:-}
+      - OLLAMA_CLOUD_API_KEY=${OLLAMA_CLOUD_API_KEY:-}
       - GITHUB_TOKEN=${GITHUB_TOKEN:-}
       - DATA_DIR=/data
     extra_hosts:

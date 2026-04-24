@@ -46,6 +46,13 @@ llm:
     embedding_dimensions: 768
     embedding_model: local-embed
     query_model: local-model
+  ollama_cloud:
+    base_url: https://ollama.com/v1
+    # api_key is read from OLLAMA_CLOUD_API_KEY env var; set here only as fallback
+    classification_model: gemma3:12b
+    query_model: gemma3:27b
+    embedding_model: mxbai-embed-large
+    embedding_dimensions: 1024
   provider: ollama
 rag:
   chunk_overlap: 50

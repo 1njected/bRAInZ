@@ -18,11 +18,17 @@ class OpenAIProvider:
         self._embedding_model = config.get("embedding_model", "text-embedding-3-small")
         self._embedding_dimensions = config.get("embedding_dimensions", 1536)
         self._mode = mode
+        self._embed_base_url = None
 
         kwargs: dict = {}
         if mode == "openai_compatible":
             kwargs["base_url"] = config.get("base_url", "http://localhost:1234/v1")
             kwargs["api_key"] = config.get("api_key", "lm-studio")
+        elif mode == "ollama_cloud":
+            kwargs["base_url"] = config.get("base_url", "https://ollama.com/v1")
+            kwargs["api_key"] = os.environ.get("OLLAMA_CLOUD_API_KEY", config.get("api_key", ""))
+            # Native Ollama /api/embed endpoint for embeddings (cloud doesn't support /v1/embeddings)
+            self._embed_base_url = config.get("embed_base_url", "http://host.docker.internal:11434")
         else:
             kwargs["api_key"] = os.environ.get("OPENAI_API_KEY")
 
@@ -60,6 +66,17 @@ class OpenAIProvider:
         return resp.choices[0].message.content
 
     async def embed(self, texts: list[str]) -> list[list[float]]:
+        if self._embed_base_url:
+            import httpx
+            async with httpx.AsyncClient() as client:
+                resp = await client.post(
+                    f"{self._embed_base_url}/api/embed",
+                    json={"model": self._embedding_model, "input": texts},
+                    timeout=120,
+                )
+                resp.raise_for_status()
+                return resp.json()["embeddings"]
+
         resp = await self._client.embeddings.create(
             model=self._embedding_model,
             input=texts,

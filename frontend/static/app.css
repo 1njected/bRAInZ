@@ -160,6 +160,26 @@
       --link:        #268bd2;
     }
 
+    /* ── Daylight ── */
+    [data-theme="daylight"] {
+      --bg:          #ffffff;
+      --bg2:         #f3f4f6;
+      --bg3:         #e9ebee;
+      --panel:       #f6f8fa;
+      --accent:      #0969da;
+      --accent-text: #ffffff;
+      --hi:          #cf222e;
+      --hi2:         #a40e26;
+      --text:        #1f2328;
+      --dim:         #57606a;
+      --muted:       #d0d7de;
+      --border:      #d0d7de;
+      --border2:     #b8bfc8;
+      --success:     #1a7f37;
+      --tag-bg:      #ddf4ff;
+      --link:        #0969da;
+    }
+
     /* ── Dracula Dark ── */
     [data-theme="dracula-dark"] {
       --bg:          #191a21;
@@ -371,7 +391,7 @@
     .detail-meta a:hover { text-decoration: underline; }
     .detail-actions { display: flex; gap: 8px; margin-bottom: 14px; flex-wrap: wrap; align-items: center; }
     .btn {
-      background: var(--accent); color: var(--text); border: none;
+      background: var(--accent); color: var(--accent-text); border: none;
       border-radius: 4px; padding: 6px 12px; font-size: 12px;
       cursor: pointer; transition: opacity .15s;
     }
@@ -991,4 +1011,98 @@
 
       /* Detail body height (100vh calc breaks inside position:absolute) */
       .detail-body, #snapshotFrame { height: 60vh; min-height: 300px; }
+    }
+
+    /* Landscape phone: restore side-by-side layout with compact columns */
+    @media (max-width: 932px) and (orientation: landscape) {
+      /* Undo the portrait mobile overrides */
+      .mobile-menu-btn, .mobile-back-btn { display: none; }
+
+      nav {
+        position: static;
+        width: 160px !important;
+        transform: none !important;
+        transition: none;
+        box-shadow: none;
+        z-index: auto;
+      }
+      #mobileNavBackdrop { display: none !important; }
+
+      .content-area { position: static; overflow: visible; }
+
+      #listPanel {
+        position: static;
+        width: 240px !important;
+        transform: none !important;
+        transition: none;
+        z-index: auto;
+        flex-shrink: 0;
+      }
+
+      #detailPanel {
+        position: static;
+        width: auto !important;
+        flex: 1;
+        transform: none !important;
+        transition: none;
+        z-index: auto;
+      }
+
+      /* Full-width view wrappers back to normal flow */
+      #rssViewWrapper, #toolsViewWrapper, #followupViewWrapper,
+      #digestViewWrapper, #searchViewWrapper, #querySkillsView {
+        position: static;
+        z-index: auto;
+      }
+
+      .rss-feeds-panel {
+        position: static;
+        width: 240px !important;
+        transform: none !important;
+        flex-shrink: 0;
+      }
+      .rss-entries-panel {
+        position: static;
+        flex: 1;
+        transform: none !important;
+      }
+
+      #followupListCol {
+        position: static;
+        width: 240px !important;
+        transform: none !important;
+        flex-shrink: 0;
+      }
+      #followupDetailPanel {
+        position: static;
+        flex: 1;
+        transform: none !important;
+      }
+
+      #digestListCol {
+        position: static;
+        width: 240px !important;
+        transform: none !important;
+        flex-shrink: 0;
+      }
+      #digestPageDetail {
+        position: static;
+        flex: 1;
+        transform: none !important;
+      }
+
+      /* Push-state body classes have no effect in landscape */
+      body.detail-open #listPanel,
+      body.rss-detail-open .rss-feeds-panel,
+      body.followup-detail-open #followupListCol,
+      body.digest-detail-open #digestListCol { transform: none !important; }
+
+      body.detail-open #detailPanel,
+      body.rss-detail-open .rss-entries-panel,
+      body.followup-detail-open #followupDetailPanel,
+      body.digest-detail-open #digestPageDetail { transform: none !important; }
+
+      .detail-body, #snapshotFrame { height: calc(100vh - 100px); min-height: 200px; }
+      header { padding: 0 8px; gap: 6px; }
+      .header-stats { display: none; }
     }
