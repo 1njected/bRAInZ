@@ -79,19 +79,17 @@ class GoogleProvider:
         import asyncio
         t0 = time.perf_counter()
         loop = asyncio.get_event_loop()
-        results = []
         try:
-            for text in texts:
-                result = await loop.run_in_executor(
-                    None,
-                    lambda t=text: self._client.models.embed_content(
-                        model=self._embedding_model,
-                        contents=t,
-                    ),
-                )
-                results.append(result.embeddings[0].values)
+            result = await loop.run_in_executor(
+                None,
+                lambda: self._client.models.embed_content(
+                    model=self._embedding_model,
+                    contents=texts,
+                    config={"output_dimensionality": self._embedding_dimensions},
+                ),
+            )
         except Exception as e:
             _log.error("llm embed %s error: %s", self._embedding_model, e)
             raise
         _log.info("llm embed %s n=%d %.2fs", self._embedding_model, len(texts), time.perf_counter() - t0)
-        return results
+        return [e.values for e in result.embeddings]
