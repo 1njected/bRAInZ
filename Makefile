@@ -1,6 +1,8 @@
 -include .env
 export
 
+COMPOSE_FILES = $(if $(filter true,$(USETAILSCALE)),-f docker-compose.yaml -f docker-compose-tailscale.yaml,)
+
 .PHONY: up down build restart logs test sync deploy
 
 up:
@@ -22,4 +24,4 @@ test:
 	cd tests && docker compose run --rm brainz pytest $(filter-out $@,$(MAKECMDGOALS))
 
 deploy:
-	ssh $(DEPLOY_HOST) "cd $(DEPLOY_PATH) && git pull && docker compose up --build -d brainz"
+	ssh $(DEPLOY_HOST) "cd $(DEPLOY_PATH) && git pull && docker compose $(COMPOSE_FILES) up --build -d"
