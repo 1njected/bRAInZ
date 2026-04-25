@@ -52,7 +52,10 @@ class GoogleProvider:
         u = result.usage_metadata
         _log.info("llm complete %s in=%d out=%d %.2fs",
                   self._query_model, u.prompt_token_count, u.candidates_token_count, time.perf_counter() - t0)
-        return result.text
+        if result.text is None:
+            _log.warning("llm complete %s returned None text (finish_reason=%s)",
+                         self._query_model, result.candidates[0].finish_reason if result.candidates else "unknown")
+        return result.text or ""
 
     async def complete_classify(self, system: str, prompt: str) -> str:
         import asyncio
@@ -73,7 +76,10 @@ class GoogleProvider:
         u = result.usage_metadata
         _log.info("llm classify %s in=%d out=%d %.2fs",
                   self._classification_model, u.prompt_token_count, u.candidates_token_count, time.perf_counter() - t0)
-        return result.text
+        if result.text is None:
+            _log.warning("llm classify %s returned None text (finish_reason=%s)",
+                         self._classification_model, result.candidates[0].finish_reason if result.candidates else "unknown")
+        return result.text or ""
 
     async def embed(self, texts: list[str]) -> list[list[float]]:
         import asyncio
