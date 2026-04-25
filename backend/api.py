@@ -231,7 +231,7 @@ async def _feed_refresh_loop():
                 set_latest_urls(DATA_DIR, feed["id"], urls)
                 now = datetime.datetime.utcnow().isoformat() + "Z"
                 updates: dict = {"last_fetched": now, "last_error": None}
-                if data.get("title"):
+                if data.get("title") and not feed.get("title_locked"):
                     updates["title"] = data["title"]
                 _update_feed(DATA_DIR, feed["id"], updates)
             except Exception as exc:
@@ -1286,7 +1286,7 @@ async def refresh_all_feeds():
             set_latest_urls(DATA_DIR, feed["id"], urls)
             now = datetime.datetime.utcnow().isoformat() + "Z"
             updates: dict = {"last_fetched": now, "last_error": None}
-            if data.get("title") and data["title"] != feed["url"]:
+            if data.get("title") and data["title"] != feed["url"] and not feed.get("title_locked"):
                 updates["title"] = data["title"]
             _update_feed(DATA_DIR, feed["id"], updates)
             refreshed += 1
@@ -1320,6 +1320,8 @@ async def delete_feed(feed_id: str):
 async def update_feed(feed_id: str, req: UpdateFeedRequest):
     from rssfeeds.store import update_feed as _update_feed
     updates = req.model_dump(exclude_none=True)
+    if "title" in updates:
+        updates["title_locked"] = True
     updated = _update_feed(DATA_DIR, feed_id, updates)
     if not updated:
         raise HTTPException(404, "Feed not found")
@@ -1347,7 +1349,7 @@ async def preview_feed(feed_id: str):
             set_latest_urls(DATA_DIR, feed_id, urls)
             now = datetime.datetime.utcnow().isoformat() + "Z"
             updates: dict = {"last_fetched": now, "last_error": None}
-            if data.get("title") and data["title"] != feed["url"]:
+            if data.get("title") and data["title"] != feed["url"] and not feed.get("title_locked"):
                 updates["title"] = data["title"]
             _update_feed(DATA_DIR, feed_id, updates)
         except Exception as e:
