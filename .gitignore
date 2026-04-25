@@ -17,6 +17,7 @@ data/index.json
 data/feeds.yaml
 data/tools.yaml
 data/logs/
+data/config.yaml
 
 tests/testdata/
 
