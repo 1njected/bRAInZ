@@ -100,7 +100,7 @@ class VectorIndex:
         results = []
         for idx in top_indices:
             score = float(scores[idx])
-            if score < 0.5:
+            if score < 0.25:
                 continue
             item_id = self._item_map[idx]
             if item_id in seen:
