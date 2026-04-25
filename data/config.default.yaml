@@ -1,0 +1,77 @@
+server:
+  cors_origins:
+    - "*"
+
+feeds:
+  refresh_interval_minutes: 60
+
+ingestion:
+  bulk_rate_limit: 1.0
+  classifier_body_words: 400
+  max_content_length: 10000000
+  request_timeout: 30
+  user_agent: Mozilla/5.0 (compatible; bRAInZ/0.1)
+
+llm:
+  # Active provider. Override with LLM_PROVIDER env var.
+  provider: ollama
+
+  ollama:
+    base_url: http://host.docker.internal:11434
+    classification_model: gemma3:12b
+    vision_model: gemma3:12b
+    classify_timeout: 120
+    embed_timeout: 120
+    embedding_dimensions: 1024
+    embedding_model: mxbai-embed-large:latest
+    embed_max_chars: 800
+    query_model: gemma3:12b
+    query_timeout: 300
+    query_num_ctx: 32768
+    query_temperature: 0.1
+    query_think: false
+
+  anthropic:
+    classification_model: claude-haiku-4-5-20251001
+    vision_model: claude-haiku-4-5-20251001
+    query_model: claude-sonnet-4-6
+    embedding_model: voyage-3
+    embedding_dimensions: 1024
+
+  openai:
+    classification_model: gpt-4o-mini
+    vision_model: gpt-4o-mini
+    query_model: gpt-4o
+    embedding_model: text-embedding-3-small
+    embedding_dimensions: 1536
+
+  openai_compatible:
+    base_url: http://localhost:1234/v1
+    api_key: lm-studio
+    classification_model: local-model
+    vision_model: local-model
+    query_model: local-model
+    embedding_model: local-embed
+    embedding_dimensions: 768
+
+  ollama_cloud:
+    base_url: https://ollama.com/v1
+    # api_key read from OLLAMA_CLOUD_API_KEY env var
+    classification_model: gemma3:12b
+    query_model: gemma3:27b
+    # Ollama Cloud has no embeddings endpoint — point at a local Ollama for embed
+    embed_base_url: http://host.docker.internal:11434
+    embedding_model: mxbai-embed-large:latest
+    embedding_dimensions: 1024
+
+rag:
+  chunk_size: 400
+  chunk_overlap: 50
+  default_top_k: 10
+  query_top_k: 8
+  skill_top_chunks: 50
+  reranker: flashrank
+  reranker_top_k: 5
+
+tools:
+  refresh_interval_minutes: 1440
