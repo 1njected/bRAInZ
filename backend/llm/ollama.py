@@ -1,7 +1,11 @@
 """Ollama LLM provider — uses Ollama REST API via httpx."""
 
 from __future__ import annotations
+import logging
+import time
 import httpx
+
+_log = logging.getLogger(__name__)
 
 
 class OllamaProvider:
@@ -46,11 +50,14 @@ class OllamaProvider:
         }
         if self._query_think:
             payload["think"] = True
+        t0 = time.perf_counter()
         async with httpx.AsyncClient(timeout=float(self._config.get("query_timeout", 300))) as client:
             resp = await client.post(f"{self._base_url}/api/generate", json=payload)
             resp.raise_for_status()
             data = resp.json()
-            return data["response"], data.get("thinking") or ""
+        _log.info("llm complete %s in=%d out=%d %.2fs",
+                  self._query_model, data.get("prompt_eval_count", 0), data.get("eval_count", 0), time.perf_counter() - t0)
+        return data["response"], data.get("thinking") or ""
 
     async def complete_classify(self, system: str, prompt: str) -> str:
         """Use the classification model (may differ from query model)."""
@@ -64,10 +71,14 @@ class OllamaProvider:
                 "temperature": 0.1,   # low temp for deterministic classification
             },
         }
+        t0 = time.perf_counter()
         async with httpx.AsyncClient(timeout=float(self._config.get("classify_timeout", 120))) as client:
             resp = await client.post(f"{self._base_url}/api/generate", json=payload)
             resp.raise_for_status()
-            return resp.json()["response"]
+            data = resp.json()
+        _log.info("llm classify %s in=%d out=%d %.2fs",
+                  self._classification_model, data.get("prompt_eval_count", 0), data.get("eval_count", 0), time.perf_counter() - t0)
+        return data["response"]
 
     async def embed(self, texts: list[str]) -> list[list[float]]:
         # Sanitize: replace None/empty with a space; truncate to fit model context.
@@ -76,6 +87,7 @@ class OllamaProvider:
         max_chars = self._config.get("embed_max_chars", 800)
         embed_num_ctx = self._config.get("embed_num_ctx", 512)
         clean = [(t.strip()[:max_chars] if t and t.strip() else " ") for t in texts]
+        t0 = time.perf_counter()
         async with httpx.AsyncClient(timeout=float(self._config.get("embed_timeout", 120))) as client:
             payload = {
                 "model": self._embedding_model,
@@ -85,4 +97,5 @@ class OllamaProvider:
             resp = await client.post(f"{self._base_url}/api/embed", json=payload)
             if not resp.is_success:
                 raise RuntimeError(f"Ollama embed error {resp.status_code}: {resp.text[:200]}")
-            return resp.json()["embeddings"]
+        _log.info("llm embed %s n=%d %.2fs", self._embedding_model, len(texts), time.perf_counter() - t0)
+        return resp.json()["embeddings"]

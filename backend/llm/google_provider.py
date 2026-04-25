@@ -1,7 +1,11 @@
 """Google AI (Gemini) provider — Gemini for completions, text-embedding for embeddings."""
 
 from __future__ import annotations
+import logging
+import time
 import os
+
+_log = logging.getLogger(__name__)
 
 
 class GoogleProvider:
@@ -31,6 +35,7 @@ class GoogleProvider:
 
     async def complete(self, system: str, prompt: str, max_tokens: int = 4096) -> str:
         import asyncio
+        t0 = time.perf_counter()
         loop = asyncio.get_event_loop()
         result = await loop.run_in_executor(
             None,
@@ -40,10 +45,14 @@ class GoogleProvider:
                 config={"max_output_tokens": max_tokens},
             ),
         )
+        u = result.usage_metadata
+        _log.info("llm complete %s in=%d out=%d %.2fs",
+                  self._query_model, u.prompt_token_count, u.candidates_token_count, time.perf_counter() - t0)
         return result.text
 
     async def complete_classify(self, system: str, prompt: str) -> str:
         import asyncio
+        t0 = time.perf_counter()
         loop = asyncio.get_event_loop()
         result = await loop.run_in_executor(
             None,
@@ -53,10 +62,14 @@ class GoogleProvider:
                 config={"max_output_tokens": 500},
             ),
         )
+        u = result.usage_metadata
+        _log.info("llm classify %s in=%d out=%d %.2fs",
+                  self._classification_model, u.prompt_token_count, u.candidates_token_count, time.perf_counter() - t0)
         return result.text
 
     async def embed(self, texts: list[str]) -> list[list[float]]:
         import asyncio
+        t0 = time.perf_counter()
         loop = asyncio.get_event_loop()
         results = []
         for text in texts:
@@ -68,4 +81,5 @@ class GoogleProvider:
                 ),
             )
             results.append(result.embeddings[0].values)
+        _log.info("llm embed %s n=%d %.2fs", self._embedding_model, len(texts), time.perf_counter() - t0)
         return results

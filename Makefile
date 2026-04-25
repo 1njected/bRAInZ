@@ -1,7 +1,7 @@
 -include .env
 export
 
-COMPOSE_FILES = $(if $(filter true,$(USETAILSCALE)),-f docker-compose.yaml -f docker-compose-tailscale.yaml,)
+COMPOSE_FILES = $(if $(filter true,$(USETAILSCALE)),-f docker-compose-tailscale.yaml,)
 
 .PHONY: up down build restart logs test sync deploy
 

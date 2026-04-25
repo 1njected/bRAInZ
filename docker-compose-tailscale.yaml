@@ -20,7 +20,6 @@ services:
     restart: unless-stopped
   brainz:
     build: .
-    extra_hosts: []
     volumes:
       - ./data:/data
       - ./backend:/app

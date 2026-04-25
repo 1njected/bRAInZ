@@ -1,7 +1,11 @@
 """Anthropic LLM provider — Claude for completions, Voyage for embeddings."""
 
 from __future__ import annotations
+import logging
+import time
 import os
+
+_log = logging.getLogger(__name__)
 
 
 class AnthropicProvider:
@@ -45,30 +49,37 @@ class AnthropicProvider:
         return f"anthropic/{self._query_model}"
 
     async def complete(self, system: str, prompt: str, max_tokens: int = 4096) -> str:
+        t0 = time.perf_counter()
         msg = await self._client.messages.create(
             model=self._query_model,
             max_tokens=max_tokens,
             system=system,
             messages=[{"role": "user", "content": prompt}],
         )
+        _log.info("llm complete %s in=%d out=%d %.2fs",
+                  self._query_model, msg.usage.input_tokens, msg.usage.output_tokens, time.perf_counter() - t0)
         return msg.content[0].text
 
     async def complete_classify(self, system: str, prompt: str) -> str:
+        t0 = time.perf_counter()
         msg = await self._client.messages.create(
             model=self._classification_model,
             max_tokens=500,
             system=system,
             messages=[{"role": "user", "content": prompt}],
         )
+        _log.info("llm classify %s in=%d out=%d %.2fs",
+                  self._classification_model, msg.usage.input_tokens, msg.usage.output_tokens, time.perf_counter() - t0)
         return msg.content[0].text
 
     async def embed(self, texts: list[str]) -> list[list[float]]:
         import asyncio
         voyage = self._get_voyage()
-        # voyageai client is sync — run in executor
+        t0 = time.perf_counter()
         loop = asyncio.get_event_loop()
         result = await loop.run_in_executor(
             None,
             lambda: voyage.embed(texts, model=self._embedding_model),
         )
+        _log.info("llm embed %s n=%d %.2fs", self._embedding_model, len(texts), time.perf_counter() - t0)
         return result.embeddings
