@@ -6,6 +6,7 @@ services:
       - TS_HOSTNAME=${TAILSCALE_HOSTNAME:-brainz-tailscale}
       - TS_AUTHKEY=${TAILSCALE_AUTH_KEY:-}
       - TS_STATE_DIR=/var/lib/tailscale
+      - TS_USERSPACE=false
       - TS_EXTRA_ARGS=--accept-routes --accept-dns
       #- TS_SERVE_CONFIG=/config/brainz-tailscale.json
     volumes:
