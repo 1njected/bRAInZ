@@ -1,6 +1,6 @@
 FROM rust:slim AS monolith-builder
 RUN apt-get update && apt-get install -y --no-install-recommends \
-    pkg-config libssl-dev perl && \
+    pkg-config libssl-dev perl curl && \
     rm -rf /var/lib/apt/lists/* && \
     OPENSSL_NO_VENDOR=1 cargo install monolith
 
