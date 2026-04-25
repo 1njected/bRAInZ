@@ -52,6 +52,14 @@ _tools_refreshing: dict[str, str] = {}
 
 log = logging.getLogger(__name__)
 
+# Route llm.* logs to stderr alongside uvicorn output
+_llm_log = logging.getLogger("llm")
+_llm_log.setLevel(logging.INFO)
+if not _llm_log.handlers:
+    _h = logging.StreamHandler()
+    _h.setFormatter(logging.Formatter("%(levelname)s:%(name)s:%(message)s"))
+    _llm_log.addHandler(_h)
+
 
 def _get_refresh_interval(section: str, default: int) -> int:
     return get_config().get(section, {}).get("refresh_interval_minutes", default)

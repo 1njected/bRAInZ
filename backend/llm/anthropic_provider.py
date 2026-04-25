@@ -50,24 +50,32 @@ class AnthropicProvider:
 
     async def complete(self, system: str, prompt: str, max_tokens: int = 4096) -> str:
         t0 = time.perf_counter()
-        msg = await self._client.messages.create(
-            model=self._query_model,
-            max_tokens=max_tokens,
-            system=system,
-            messages=[{"role": "user", "content": prompt}],
-        )
+        try:
+            msg = await self._client.messages.create(
+                model=self._query_model,
+                max_tokens=max_tokens,
+                system=system,
+                messages=[{"role": "user", "content": prompt}],
+            )
+        except Exception as e:
+            _log.error("llm complete %s error: %s", self._query_model, e)
+            raise
         _log.info("llm complete %s in=%d out=%d %.2fs",
                   self._query_model, msg.usage.input_tokens, msg.usage.output_tokens, time.perf_counter() - t0)
         return msg.content[0].text
 
     async def complete_classify(self, system: str, prompt: str) -> str:
         t0 = time.perf_counter()
-        msg = await self._client.messages.create(
-            model=self._classification_model,
-            max_tokens=500,
-            system=system,
-            messages=[{"role": "user", "content": prompt}],
-        )
+        try:
+            msg = await self._client.messages.create(
+                model=self._classification_model,
+                max_tokens=500,
+                system=system,
+                messages=[{"role": "user", "content": prompt}],
+            )
+        except Exception as e:
+            _log.error("llm classify %s error: %s", self._classification_model, e)
+            raise
         _log.info("llm classify %s in=%d out=%d %.2fs",
                   self._classification_model, msg.usage.input_tokens, msg.usage.output_tokens, time.perf_counter() - t0)
         return msg.content[0].text
@@ -77,9 +85,13 @@ class AnthropicProvider:
         voyage = self._get_voyage()
         t0 = time.perf_counter()
         loop = asyncio.get_event_loop()
-        result = await loop.run_in_executor(
-            None,
-            lambda: voyage.embed(texts, model=self._embedding_model),
-        )
+        try:
+            result = await loop.run_in_executor(
+                None,
+                lambda: voyage.embed(texts, model=self._embedding_model),
+            )
+        except Exception as e:
+            _log.error("llm embed %s error: %s", self._embedding_model, e)
+            raise
         _log.info("llm embed %s n=%d %.2fs", self._embedding_model, len(texts), time.perf_counter() - t0)
         return result.embeddings

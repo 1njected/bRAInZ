@@ -85,49 +85,61 @@ class OpenAIProvider:
 
     async def complete(self, system: str, prompt: str, max_tokens: int = 4096) -> str:
         t0 = time.perf_counter()
-        resp = await self._client.chat.completions.create(
-            model=self._query_model,
-            max_tokens=max_tokens,
-            messages=[
-                {"role": "system", "content": system},
-                {"role": "user", "content": prompt},
-            ],
-        )
+        try:
+            resp = await self._client.chat.completions.create(
+                model=self._query_model,
+                max_tokens=max_tokens,
+                messages=[
+                    {"role": "system", "content": system},
+                    {"role": "user", "content": prompt},
+                ],
+            )
+        except Exception as e:
+            _log.error("llm complete %s error: %s", self._query_model, e)
+            raise
         _log.info("llm complete %s in=%d out=%d %.2fs",
                   self._query_model, resp.usage.prompt_tokens, resp.usage.completion_tokens, time.perf_counter() - t0)
         return resp.choices[0].message.content
 
     async def complete_classify(self, system: str, prompt: str) -> str:
         t0 = time.perf_counter()
-        resp = await self._client.chat.completions.create(
-            model=self._classification_model,
-            max_tokens=500,
-            messages=[
-                {"role": "system", "content": system},
-                {"role": "user", "content": prompt},
-            ],
-        )
+        try:
+            resp = await self._client.chat.completions.create(
+                model=self._classification_model,
+                max_tokens=500,
+                messages=[
+                    {"role": "system", "content": system},
+                    {"role": "user", "content": prompt},
+                ],
+            )
+        except Exception as e:
+            _log.error("llm classify %s error: %s", self._classification_model, e)
+            raise
         _log.info("llm classify %s in=%d out=%d %.2fs",
                   self._classification_model, resp.usage.prompt_tokens, resp.usage.completion_tokens, time.perf_counter() - t0)
         return resp.choices[0].message.content
 
     async def embed(self, texts: list[str]) -> list[list[float]]:
         t0 = time.perf_counter()
-        if self._embed_base_url:
-            import httpx
-            async with httpx.AsyncClient() as client:
-                resp = await client.post(
-                    f"{self._embed_base_url}/api/embed",
-                    json={"model": self._embedding_model, "input": texts},
-                    timeout=120,
-                )
-                resp.raise_for_status()
-            _log.info("llm embed %s n=%d %.2fs", self._embedding_model, len(texts), time.perf_counter() - t0)
-            return resp.json()["embeddings"]
+        try:
+            if self._embed_base_url:
+                import httpx
+                async with httpx.AsyncClient() as client:
+                    resp = await client.post(
+                        f"{self._embed_base_url}/api/embed",
+                        json={"model": self._embedding_model, "input": texts},
+                        timeout=120,
+                    )
+                    resp.raise_for_status()
+                _log.info("llm embed %s n=%d %.2fs", self._embedding_model, len(texts), time.perf_counter() - t0)
+                return resp.json()["embeddings"]
 
-        resp = await self._client.embeddings.create(
-            model=self._embedding_model,
-            input=texts,
-        )
+            resp = await self._client.embeddings.create(
+                model=self._embedding_model,
+                input=texts,
+            )
+        except Exception as e:
+            _log.error("llm embed %s error: %s", self._embedding_model, e)
+            raise
         _log.info("llm embed %s n=%d %.2fs", self._embedding_model, len(texts), time.perf_counter() - t0)
         return [item.embedding for item in resp.data]

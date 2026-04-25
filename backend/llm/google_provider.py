@@ -37,14 +37,18 @@ class GoogleProvider:
         import asyncio
         t0 = time.perf_counter()
         loop = asyncio.get_event_loop()
-        result = await loop.run_in_executor(
-            None,
-            lambda: self._client.models.generate_content(
-                model=self._query_model,
-                contents=f"{system}\n\n{prompt}",
-                config={"max_output_tokens": max_tokens},
-            ),
-        )
+        try:
+            result = await loop.run_in_executor(
+                None,
+                lambda: self._client.models.generate_content(
+                    model=self._query_model,
+                    contents=f"{system}\n\n{prompt}",
+                    config={"max_output_tokens": max_tokens},
+                ),
+            )
+        except Exception as e:
+            _log.error("llm complete %s error: %s", self._query_model, e)
+            raise
         u = result.usage_metadata
         _log.info("llm complete %s in=%d out=%d %.2fs",
                   self._query_model, u.prompt_token_count, u.candidates_token_count, time.perf_counter() - t0)
@@ -54,14 +58,18 @@ class GoogleProvider:
         import asyncio
         t0 = time.perf_counter()
         loop = asyncio.get_event_loop()
-        result = await loop.run_in_executor(
-            None,
-            lambda: self._client.models.generate_content(
-                model=self._classification_model,
-                contents=f"{system}\n\n{prompt}",
-                config={"max_output_tokens": 500},
-            ),
-        )
+        try:
+            result = await loop.run_in_executor(
+                None,
+                lambda: self._client.models.generate_content(
+                    model=self._classification_model,
+                    contents=f"{system}\n\n{prompt}",
+                    config={"max_output_tokens": 500},
+                ),
+            )
+        except Exception as e:
+            _log.error("llm classify %s error: %s", self._classification_model, e)
+            raise
         u = result.usage_metadata
         _log.info("llm classify %s in=%d out=%d %.2fs",
                   self._classification_model, u.prompt_token_count, u.candidates_token_count, time.perf_counter() - t0)
@@ -72,14 +80,18 @@ class GoogleProvider:
         t0 = time.perf_counter()
         loop = asyncio.get_event_loop()
         results = []
-        for text in texts:
-            result = await loop.run_in_executor(
-                None,
-                lambda t=text: self._client.models.embed_content(
-                    model=self._embedding_model,
-                    contents=t,
-                ),
-            )
-            results.append(result.embeddings[0].values)
+        try:
+            for text in texts:
+                result = await loop.run_in_executor(
+                    None,
+                    lambda t=text: self._client.models.embed_content(
+                        model=self._embedding_model,
+                        contents=t,
+                    ),
+                )
+                results.append(result.embeddings[0].values)
+        except Exception as e:
+            _log.error("llm embed %s error: %s", self._embedding_model, e)
+            raise
         _log.info("llm embed %s n=%d %.2fs", self._embedding_model, len(texts), time.perf_counter() - t0)
         return results

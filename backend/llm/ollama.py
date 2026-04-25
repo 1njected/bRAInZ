@@ -51,10 +51,14 @@ class OllamaProvider:
         if self._query_think:
             payload["think"] = True
         t0 = time.perf_counter()
-        async with httpx.AsyncClient(timeout=float(self._config.get("query_timeout", 300))) as client:
-            resp = await client.post(f"{self._base_url}/api/generate", json=payload)
-            resp.raise_for_status()
-            data = resp.json()
+        try:
+            async with httpx.AsyncClient(timeout=float(self._config.get("query_timeout", 300))) as client:
+                resp = await client.post(f"{self._base_url}/api/generate", json=payload)
+                resp.raise_for_status()
+                data = resp.json()
+        except Exception as e:
+            _log.error("llm complete %s error: %s", self._query_model, e)
+            raise
         _log.info("llm complete %s in=%d out=%d %.2fs",
                   self._query_model, data.get("prompt_eval_count", 0), data.get("eval_count", 0), time.perf_counter() - t0)
         return data["response"], data.get("thinking") or ""
@@ -72,10 +76,14 @@ class OllamaProvider:
             },
         }
         t0 = time.perf_counter()
-        async with httpx.AsyncClient(timeout=float(self._config.get("classify_timeout", 120))) as client:
-            resp = await client.post(f"{self._base_url}/api/generate", json=payload)
-            resp.raise_for_status()
-            data = resp.json()
+        try:
+            async with httpx.AsyncClient(timeout=float(self._config.get("classify_timeout", 120))) as client:
+                resp = await client.post(f"{self._base_url}/api/generate", json=payload)
+                resp.raise_for_status()
+                data = resp.json()
+        except Exception as e:
+            _log.error("llm classify %s error: %s", self._classification_model, e)
+            raise
         _log.info("llm classify %s in=%d out=%d %.2fs",
                   self._classification_model, data.get("prompt_eval_count", 0), data.get("eval_count", 0), time.perf_counter() - t0)
         return data["response"]
@@ -88,14 +96,18 @@ class OllamaProvider:
         embed_num_ctx = self._config.get("embed_num_ctx", 512)
         clean = [(t.strip()[:max_chars] if t and t.strip() else " ") for t in texts]
         t0 = time.perf_counter()
-        async with httpx.AsyncClient(timeout=float(self._config.get("embed_timeout", 120))) as client:
-            payload = {
-                "model": self._embedding_model,
-                "input": clean,
-                "options": {"num_ctx": embed_num_ctx},
-            }
-            resp = await client.post(f"{self._base_url}/api/embed", json=payload)
-            if not resp.is_success:
-                raise RuntimeError(f"Ollama embed error {resp.status_code}: {resp.text[:200]}")
+        try:
+            async with httpx.AsyncClient(timeout=float(self._config.get("embed_timeout", 120))) as client:
+                payload = {
+                    "model": self._embedding_model,
+                    "input": clean,
+                    "options": {"num_ctx": embed_num_ctx},
+                }
+                resp = await client.post(f"{self._base_url}/api/embed", json=payload)
+                if not resp.is_success:
+                    raise RuntimeError(f"Ollama embed error {resp.status_code}: {resp.text[:200]}")
+        except Exception as e:
+            _log.error("llm embed %s error: %s", self._embedding_model, e)
+            raise
         _log.info("llm embed %s n=%d %.2fs", self._embedding_model, len(texts), time.perf_counter() - t0)
         return resp.json()["embeddings"]
