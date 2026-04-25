@@ -18,6 +18,9 @@ DATA_DIR = _data_dir()
 def _config_path() -> Path:
     return _data_dir() / "config.yaml"
 
+def _default_config_path() -> Path:
+    return _data_dir() / "config.default.yaml"
+
 def _taxonomy_path() -> Path:
     return _data_dir() / "taxonomy.yaml"
 
@@ -95,11 +98,17 @@ def _deep_merge(base: dict, override: dict) -> dict:
 def load_config() -> dict:
     config = _deep_merge({}, DEFAULT_CONFIG)
 
+    # Git-tracked defaults — always present in the repo
+    default_path = _default_config_path()
+    if default_path.exists():
+        with open(default_path) as f:
+            config = _deep_merge(config, yaml.safe_load(f) or {})
+
+    # Server-local overrides (gitignored) — server values win
     config_path = _config_path()
     if config_path.exists():
         with open(config_path) as f:
-            file_config = yaml.safe_load(f) or {}
-        config = _deep_merge(config, file_config)
+            config = _deep_merge(config, yaml.safe_load(f) or {})
 
     # Env var overrides
     provider = os.environ.get("LLM_PROVIDER")
