@@ -1,39 +1,75 @@
-"""OpenAI / OpenAI-compatible LLM provider."""
+"""OpenAI / OpenAI-compatible LLM provider.
+
+Supports a `preset` key in config to load known-provider defaults.
+Any field in the config section overrides the preset value.
+
+Built-in presets: openai, mistral, ollama_cloud
+"""
 
 from __future__ import annotations
 import os
 
+_PRESETS: dict[str, dict] = {
+    "openai": {
+        "base_url": None,  # use SDK default
+        "api_key_env": "OPENAI_API_KEY",
+        "classification_model": "gpt-4o-mini",
+        "query_model": "gpt-4o",
+        "embedding_model": "text-embedding-3-small",
+        "embedding_dimensions": 1536,
+    },
+    "mistral": {
+        "base_url": "https://api.mistral.ai/v1",
+        "api_key_env": "MISTRAL_API_KEY",
+        "classification_model": "mistral-small-latest",
+        "query_model": "mistral-large-latest",
+        "embedding_model": "mistral-embed",
+        "embedding_dimensions": 1024,
+    },
+    "ollama_cloud": {
+        "base_url": "https://ollama.com/v1",
+        "api_key_env": "OLLAMA_CLOUD_API_KEY",
+        "classification_model": "gemma3:12b",
+        "query_model": "gemma3:27b",
+        # Ollama Cloud has no /v1/embeddings — fall back to a local Ollama instance
+        "embed_base_url": "http://host.docker.internal:11434",
+        "embedding_model": "mxbai-embed-large",
+        "embedding_dimensions": 1024,
+    },
+}
+
 
 class OpenAIProvider:
-    def __init__(self, config: dict, mode: str = "openai"):
+    def __init__(self, config: dict):
         try:
             from openai import AsyncOpenAI
         except ImportError:
             raise ImportError(
-                "OpenAI provider requires: pip install 'brainz[openai]'"
+                "OpenAI provider requires: pip install openai"
             )
-        self._classification_model = config.get("classification_model", "gpt-4o-mini")
-        self._query_model = config.get("query_model", "gpt-4o")
+
+        preset_name = config.get("preset", "openai")
+        preset = dict(_PRESETS.get(preset_name, _PRESETS["openai"]))
+
+        self._classification_model = config.get("classification_model", preset.get("classification_model", "gpt-4o-mini"))
+        self._query_model = config.get("query_model", preset.get("query_model", "gpt-4o"))
         self._vision_model = config.get("vision_model", self._classification_model)
-        self._embedding_model = config.get("embedding_model", "text-embedding-3-small")
-        self._embedding_dimensions = config.get("embedding_dimensions", 1536)
-        self._mode = mode
-        self._embed_base_url = None
+        self._embedding_model = config.get("embedding_model", preset.get("embedding_model", "text-embedding-3-small"))
+        self._embedding_dimensions = config.get("embedding_dimensions", preset.get("embedding_dimensions", 1536))
+        self._preset = preset_name
 
-        kwargs: dict = {}
-        if mode == "openai_compatible":
-            kwargs["base_url"] = config.get("base_url", "http://localhost:1234/v1")
-            kwargs["api_key"] = config.get("api_key", "lm-studio")
-        elif mode == "ollama_cloud":
-            kwargs["base_url"] = config.get("base_url", "https://ollama.com/v1")
-            kwargs["api_key"] = os.environ.get("OLLAMA_CLOUD_API_KEY", config.get("api_key", ""))
-            # Native Ollama /api/embed endpoint for embeddings (cloud doesn't support /v1/embeddings)
-            self._embed_base_url = config.get("embed_base_url", "http://host.docker.internal:11434")
-        else:
-            kwargs["api_key"] = os.environ.get("OPENAI_API_KEY")
+        api_key_env = preset.get("api_key_env", "OPENAI_API_KEY")
+        api_key = os.environ.get(api_key_env, config.get("api_key", ""))
+        base_url = config.get("base_url", preset.get("base_url"))
 
-        from openai import AsyncOpenAI
+        kwargs: dict = {"api_key": api_key}
+        if base_url:
+            kwargs["base_url"] = base_url
+
         self._client = AsyncOpenAI(**kwargs)
+
+        # Some presets (ollama_cloud) can't use /v1/embeddings and need a separate endpoint
+        self._embed_base_url: str | None = config.get("embed_base_url", preset.get("embed_base_url"))
 
     @property
     def embedding_dimensions(self) -> int:
@@ -41,7 +77,7 @@ class OpenAIProvider:
 
     @property
     def provider_name(self) -> str:
-        return f"{self._mode}/{self._query_model}"
+        return f"{self._preset}/{self._query_model}"
 
     async def complete(self, system: str, prompt: str, max_tokens: int = 4096) -> str:
         resp = await self._client.chat.completions.create(

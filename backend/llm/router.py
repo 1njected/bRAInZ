@@ -24,8 +24,11 @@ def create_provider(config: dict) -> LLMProvider:
     elif provider == "anthropic":
         from llm.anthropic_provider import AnthropicProvider
         return AnthropicProvider(pc)
-    elif provider in ("openai", "openai_compatible", "ollama_cloud"):
+    elif provider == "openai_compatible":
         from llm.openai_provider import OpenAIProvider
-        return OpenAIProvider(pc, provider)
+        return OpenAIProvider(pc)
+    elif provider == "google":
+        from llm.google_provider import GoogleProvider
+        return GoogleProvider(pc)
     else:
-        raise ValueError(f"Unknown LLM provider: {provider!r}. Choose: ollama, ollama_cloud, anthropic, openai, openai_compatible")
+        raise ValueError(f"Unknown LLM provider: {provider!r}. Choose: ollama, anthropic, openai_compatible, google")
