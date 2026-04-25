@@ -24,4 +24,4 @@ test:
 	cd tests && docker compose run --rm brainz pytest $(filter-out $@,$(MAKECMDGOALS))
 
 deploy:
-	ssh $(DEPLOY_HOST) "cd $(DEPLOY_PATH) && git pull && docker compose $(COMPOSE_FILES) up --build -d"
+	ssh $(DEPLOY_HOST) "cd $(DEPLOY_PATH) && git pull && docker compose $(COMPOSE_FILES) up --build -d --remove-orphans"
