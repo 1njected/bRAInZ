@@ -189,7 +189,6 @@ data/
   skills/                  Generated SKILL.md files
   rssfeeds/                Feed metadata and entry cache
   tools/                   GitHub repository cache and READMEs
-  personal_wiki/           User-created wiki pages
 ```
 
 The data directory is a Docker volume mount (`./data:/data`). Back it up like any other directory.

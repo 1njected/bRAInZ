@@ -122,14 +122,14 @@ function switchView(view) {
   const showRss        = view === 'rss';
   const showTools      = view === 'tools';
   const showFollowup   = view === 'followup';
-  const showMyWiki     = view === 'digest';
-  const hideDetail     = showRss || showTools || showFollowup || showMyWiki;
+  const showDigest     = view === 'digest';
+  const hideDetail     = showRss || showTools || showFollowup || showDigest;
 
   document.getElementById('navCatSection').style.display       = showList    ? '' : 'none';
   document.getElementById('navTagSection').style.display       = showList    ? '' : 'none';
   document.getElementById('navToolTopicSection').style.display = showTools   ? '' : 'none';
-  document.getElementById('navWikiCatSection').style.display   = showMyWiki  ? '' : 'none';
-  document.getElementById('navWikiTagSection').style.display   = showMyWiki  ? '' : 'none';
+  document.getElementById('navDigestCatSection').style.display   = showDigest  ? '' : 'none';
+  document.getElementById('navDigestTagSection').style.display   = showDigest  ? '' : 'none';
 
   // Standard panels (inside .content-area / #detailPanel)
   document.getElementById('listPanel').style.display     = showList  ? 'flex'  : 'none';
@@ -145,7 +145,7 @@ function switchView(view) {
   document.getElementById('rssViewWrapper').style.display            = showRss      ? 'flex' : 'none';
   document.getElementById('toolsViewWrapper').style.display          = showTools    ? 'flex' : 'none';
   document.getElementById('followupViewWrapper').style.display       = showFollowup ? 'flex' : 'none';
-  document.getElementById('digestViewWrapper').style.display   = showMyWiki   ? 'flex' : 'none';
+  document.getElementById('digestViewWrapper').style.display   = showDigest   ? 'flex' : 'none';
 
   if (view === 'library') {
     if (!currentItemId) document.getElementById('detailEmpty').style.display = 'flex';
@@ -408,7 +408,7 @@ function renderSearchGroup(containerId, heading, results, clickFn) {
     const card = document.createElement('div');
     card.className = 'search-result-card';
     const snippet = (r.content || '').replace(/[#*`>\-]/g, '').trim().slice(0, 180);
-    const displayUrl = r.url && !r.url.startsWith('wiki://') ? r.url.replace(/^https?:\/\//, '').slice(0, 60) : '';
+    const displayUrl = r.url ? r.url.replace(/^https?:\/\//, '').slice(0, 60) : '';
     card.innerHTML = `
       <div class="search-result-title">${esc(r.title)}</div>
       <div class="search-result-meta">${esc(r.category)}${displayUrl ? ` · <span style="color:var(--hi);">${esc(displayUrl)}</span>` : ''}</div>
@@ -1298,8 +1298,8 @@ async function updateFollowupBadge(count) {
 /* =====================================================================
    Digest
    ===================================================================== */
-let _myWikiPages = [];
-let _currentWikiPageId = null;
+let _myDigestPages = [];
+let _currentDigestPageId = null;
 let _digestFilterCat = '';
 let _digestFilterTag = '';
 
@@ -1322,12 +1322,12 @@ function selectDigestTag(tag) {
 }
 
 async function loadDigestPages() {
-  _myWikiPages = await api('/api/digest/pages');
+  _myDigestPages = await api('/api/digest/pages');
 
   // Build category nav
   const catCounts = {};
   const tagCounts = {};
-  for (const p of _myWikiPages) {
+  for (const p of _myDigestPages) {
     catCounts[p.category] = (catCounts[p.category] || 0) + 1;
     for (const t of (p.tags || [])) tagCounts[t] = (tagCounts[t] || 0) + 1;
   }
@@ -1362,7 +1362,7 @@ async function loadDigestPages() {
   }
 
   renderDigestPageList();
-  updateDigestBadge(_myWikiPages.length);
+  updateDigestBadge(_myDigestPages.length);
 }
 
 function renderDigestPageList() {
@@ -1370,7 +1370,7 @@ function renderDigestPageList() {
   const empty = document.getElementById('digestPageEmpty');
   list.innerHTML = '';
 
-  let filtered = _myWikiPages;
+  let filtered = _myDigestPages;
   if (_digestFilterCat) filtered = filtered.filter(p => p.category === _digestFilterCat);
   if (_digestFilterTag) filtered = filtered.filter(p => (p.tags || []).includes(_digestFilterTag));
 
@@ -1382,7 +1382,7 @@ function renderDigestPageList() {
 
   for (const p of filtered) {
     const row = document.createElement('div');
-    row.className = 'item-card' + (_currentWikiPageId === p.page_id ? ' active' : '');
+    row.className = 'item-card' + (_currentDigestPageId === p.page_id ? ' active' : '');
     row.dataset.pageId = p.page_id;
     const tagsHtml = (p.tags || []).length
       ? `<div class="tags">${p.tags.map(t => `<span class="tag">${esc(t)}</span>`).join('')}</div>`
@@ -1396,8 +1396,8 @@ function renderDigestPageList() {
 }
 
 async function loadDigestPage(pageId) {
-  _resetWikiDetailPanel();
-  _currentWikiPageId = pageId;
+  _resetDigestDetailPanel();
+  _currentDigestPageId = pageId;
   // Re-render list to update active state
   renderDigestPageList();
   const panel = document.getElementById('digestPageDetail');
@@ -1406,7 +1406,7 @@ async function loadDigestPage(pageId) {
   renderDigestPage(page);
 }
 
-function _resetWikiDetailPanel() {
+function _resetDigestDetailPanel() {
   const panel = document.getElementById('digestPageDetail');
   panel.style.overflowY = 'auto';
   panel.style.display = '';
@@ -1414,7 +1414,7 @@ function _resetWikiDetailPanel() {
 }
 
 function renderDigestPage(page) {
-  _resetWikiDetailPanel();
+  _resetDigestDetailPanel();
   const panel = document.getElementById('digestPageDetail');
   const sourceLink = page.source_item_id
     ? `<a href="#" onclick="switchView('library');loadDetail('${esc(page.source_item_id)}');return false;" style="font-size:12px;color:var(--hi);">Open source ↗</a>`
@@ -1431,7 +1431,7 @@ function renderDigestPage(page) {
       </div>
       <div class="tags" style="margin-bottom:12px;">${(page.tags||[]).map(t=>`<span class="tag">${esc(t)}</span>`).join('')}</div>
       <div class="detail-actions">
-        <button class="btn" onclick="openWikiEdit('${esc(page.page_id)}')">Edit</button>
+        <button class="btn" onclick="openDigestEdit('${esc(page.page_id)}')">Edit</button>
         <button class="btn danger" style="margin-left:auto" onclick="deleteDigestPage('${esc(page.page_id)}')">Delete</button>
       </div>
       <div class="detail-body" id="digestPageBody"></div>
@@ -1444,87 +1444,87 @@ function renderDigestPage(page) {
   }
 }
 
-/* ----- Wiki edit modal ----- */
+/* ----- Digest edit modal ----- */
 
-let wikiCurrentTags = [];
-let _wikiEditPageId = null;
-let _wikiTagSuggestions = [];
+let digestCurrentTags = [];
+let _digestEditPageId = null;
+let _digestTagSuggestions = [];
 
-function wikiModalRenderTagPills() {
-  const editor = document.getElementById('wikiModalTagEditor');
+function digestModalRenderTagPills() {
+  const editor = document.getElementById('digestModalTagEditor');
   if (!editor) return;
-  const input = document.getElementById('wikiModalTagInput');
+  const input = document.getElementById('digestModalTagInput');
   editor.querySelectorAll('.tag-pill').forEach(p => p.remove());
-  wikiCurrentTags.forEach(tag => {
+  digestCurrentTags.forEach(tag => {
     const pill = document.createElement('span');
     pill.className = 'tag-pill';
-    pill.innerHTML = `${esc(tag)}<span class="remove" onclick="wikiModalRemoveTag('${esc(tag)}')">&times;</span>`;
+    pill.innerHTML = `${esc(tag)}<span class="remove" onclick="digestModalRemoveTag('${esc(tag)}')">&times;</span>`;
     editor.insertBefore(pill, input);
   });
 }
 
-function wikiModalAddTag(raw) {
+function digestModalAddTag(raw) {
   const tag = raw.trim().toLowerCase();
-  if (!tag || wikiCurrentTags.includes(tag)) return;
-  wikiCurrentTags.push(tag);
-  wikiModalRenderTagPills();
-  wikiModalRenderCatTagPills();
-  const input = document.getElementById('wikiModalTagInput');
+  if (!tag || digestCurrentTags.includes(tag)) return;
+  digestCurrentTags.push(tag);
+  digestModalRenderTagPills();
+  digestModalRenderCatTagPills();
+  const input = document.getElementById('digestModalTagInput');
   if (input) input.value = '';
 }
 
-function wikiModalRemoveTag(tag) {
-  wikiCurrentTags = wikiCurrentTags.filter(t => t !== tag);
-  wikiModalRenderTagPills();
-  wikiModalRenderCatTagPills();
+function digestModalRemoveTag(tag) {
+  digestCurrentTags = digestCurrentTags.filter(t => t !== tag);
+  digestModalRenderTagPills();
+  digestModalRenderCatTagPills();
 }
 
-function wikiModalOnTagKeydown(e) {
+function digestModalOnTagKeydown(e) {
   const input = e.target;
   if (e.key === 'Enter' || e.key === ',') {
     e.preventDefault();
-    if (input.value.trim()) wikiModalAddTag(input.value);
-  } else if (e.key === 'Backspace' && input.value === '' && wikiCurrentTags.length) {
-    wikiCurrentTags.pop();
-    wikiModalRenderTagPills();
+    if (input.value.trim()) digestModalAddTag(input.value);
+  } else if (e.key === 'Backspace' && input.value === '' && digestCurrentTags.length) {
+    digestCurrentTags.pop();
+    digestModalRenderTagPills();
   }
 }
 
-function wikiModalOnTagInput(input) {
+function digestModalOnTagInput(input) {
   if (input.value.includes(',')) {
-    input.value.split(',').forEach(t => { if (t.trim()) wikiModalAddTag(t); });
+    input.value.split(',').forEach(t => { if (t.trim()) digestModalAddTag(t); });
     input.value = '';
   }
 }
 
-function wikiModalOnTagChange(input) {
-  if (input.value.trim()) wikiModalAddTag(input.value);
+function digestModalOnTagChange(input) {
+  if (input.value.trim()) digestModalAddTag(input.value);
 }
 
-async function wikiModalLoadTagsForCategory(category) {
+async function digestModalLoadTagsForCategory(category) {
   if (!category) return;
   try {
-    _wikiTagSuggestions = await api(`/api/config/tags/${encodeURIComponent(category)}`);
-    const dl = document.getElementById('wikiModalTagSuggestions');
-    if (dl) dl.innerHTML = _wikiTagSuggestions.map(t => `<option value="${esc(t)}">`).join('');
-    wikiModalRenderCatTagPills();
-  } catch (e) { _wikiTagSuggestions = []; }
+    _digestTagSuggestions = await api(`/api/config/tags/${encodeURIComponent(category)}`);
+    const dl = document.getElementById('digestModalTagSuggestions');
+    if (dl) dl.innerHTML = _digestTagSuggestions.map(t => `<option value="${esc(t)}">`).join('');
+    digestModalRenderCatTagPills();
+  } catch (e) { _digestTagSuggestions = []; }
 }
 
-function wikiModalRenderCatTagPills() {
-  const container = document.getElementById('wikiModalCatTagPills');
+function digestModalRenderCatTagPills() {
+  const container = document.getElementById('digestModalCatTagPills');
   if (!container) return;
-  if (!_wikiTagSuggestions.length) { container.style.display = 'none'; return; }
+  if (!_digestTagSuggestions.length) { container.style.display = 'none'; return; }
   container.style.display = 'flex';
   container.innerHTML = '';
-  for (const tag of _wikiTagSuggestions) {
+  for (const tag of _digestTagSuggestions) {
     const pill = document.createElement('span');
-    pill.className = 'cat-tag-pill' + (wikiCurrentTags.includes(tag) ? ' added' : '');
+    pill.className = 'cat-tag-pill' + (digestCurrentTags.includes(tag) ? ' added' : '');
     pill.textContent = tag;
-    pill.title = wikiCurrentTags.includes(tag) ? 'Already added' : 'Click to add';
+    pill.title = digestCurrentTags.includes(tag) ? 'Already added' : 'Click to add';
     pill.onclick = () => {
       if (pill.classList.contains('added')) return;
-      wikiModalAddTag(tag);
+      digestModalAddTag(tag);
       pill.classList.add('added');
       pill.title = 'Already added';
     };
@@ -1532,23 +1532,23 @@ function wikiModalRenderCatTagPills() {
   }
 }
 
-function _resetWikiSuggester() {
-  const results = document.getElementById('wikiSuggestResults');
-  const spinner = document.getElementById('wikiSuggestSpinner');
-  const btn = document.getElementById('wikiSuggestBtn');
+function _resetDigestSuggester() {
+  const results = document.getElementById('digestSuggestResults');
+  const spinner = document.getElementById('digestSuggestSpinner');
+  const btn = document.getElementById('digestSuggestBtn');
   if (results) { results.style.display = 'none'; results.innerHTML = ''; }
   if (spinner) spinner.style.display = 'none';
   if (btn) { btn.style.display = ''; btn.disabled = false; }
-  const det = document.getElementById('wikiTagSuggester');
+  const det = document.getElementById('digestTagSuggester');
   if (det) det.removeAttribute('open');
 }
 
-async function wikiSuggestTags() {
-  const pageId = _wikiEditPageId;
-  const cat = document.getElementById('wikiModalCategory').value;
-  const btn = document.getElementById('wikiSuggestBtn');
-  const spinner = document.getElementById('wikiSuggestSpinner');
-  const results = document.getElementById('wikiSuggestResults');
+async function digestSuggestTags() {
+  const pageId = _digestEditPageId;
+  const cat = document.getElementById('digestModalCategory').value;
+  const btn = document.getElementById('digestSuggestBtn');
+  const spinner = document.getElementById('digestSuggestSpinner');
+  const results = document.getElementById('digestSuggestResults');
   if (!pageId || !cat) return;
 
   // We need a source_item_id to call the suggest endpoint
@@ -1566,12 +1566,12 @@ async function wikiSuggestTags() {
     let suggested = [];
     if (sourceItemId) {
       const data = await api(`/api/items/${encodeURIComponent(sourceItemId)}/suggest-tags`, {
-        method: 'POST', body: JSON.stringify({ category: cat, existing_tags: wikiCurrentTags }),
+        method: 'POST', body: JSON.stringify({ category: cat, existing_tags: digestCurrentTags }),
       });
       suggested = data.suggested || [];
     } else {
       // Fall back to generic tag list for category
-      suggested = _wikiTagSuggestions.filter(t => !wikiCurrentTags.includes(t));
+      suggested = _digestTagSuggestions.filter(t => !digestCurrentTags.includes(t));
     }
     if (!suggested.length) {
       results.innerHTML = '<span style="font-size:12px;color:var(--dim)">No suggestions returned.</span>';
@@ -1583,7 +1583,7 @@ async function wikiSuggestTags() {
         pill.textContent = tag;
         pill.onclick = () => {
           if (pill.classList.contains('added')) return;
-          wikiModalAddTag(tag);
+          digestModalAddTag(tag);
           pill.classList.add('added');
           pill.title = 'Added';
         };
@@ -1600,18 +1600,18 @@ async function wikiSuggestTags() {
   }
 }
 
-async function openWikiEdit(pageId) {
+async function openDigestEdit(pageId) {
   const page = await api(`/api/digest/pages/${encodeURIComponent(pageId)}`);
-  _wikiEditPageId = pageId;
-  wikiCurrentTags = [...(page.tags || [])];
-  _wikiTagSuggestions = [];
-  _resetWikiSuggester();
+  _digestEditPageId = pageId;
+  digestCurrentTags = [...(page.tags || [])];
+  _digestTagSuggestions = [];
+  _resetDigestSuggester();
 
-  document.getElementById('wikiModalTitle').value = page.title || '';
-  document.getElementById('wikiModalContent').value = page.content || '';
+  document.getElementById('digestModalTitle').value = page.title || '';
+  document.getElementById('digestModalContent').value = page.content || '';
 
   // Populate category dropdown from config categories
-  const sel = document.getElementById('wikiModalCategory');
+  const sel = document.getElementById('digestModalCategory');
   sel.innerHTML = '';
   const cats = allConfigCategories.length ? allConfigCategories : allCategories.map(c => c.name);
   for (const c of cats) {
@@ -1629,29 +1629,29 @@ async function openWikiEdit(pageId) {
     sel.value = page.category;
   }
 
-  sel.onchange = () => { wikiModalLoadTagsForCategory(sel.value); _resetWikiSuggester(); };
-  await wikiModalLoadTagsForCategory(page.category);
-  wikiModalRenderTagPills();
+  sel.onchange = () => { digestModalLoadTagsForCategory(sel.value); _resetDigestSuggester(); };
+  await digestModalLoadTagsForCategory(page.category);
+  digestModalRenderTagPills();
 
-  document.getElementById('wikiEditModal').classList.remove('hidden');
+  document.getElementById('digestEditModal').classList.remove('hidden');
 }
 
-function closeWikiEdit() {
-  document.getElementById('wikiEditModal').classList.add('hidden');
-  _wikiEditPageId = null;
+function closeDigestEdit() {
+  document.getElementById('digestEditModal').classList.add('hidden');
+  _digestEditPageId = null;
 }
 
-async function saveWikiEdit() {
-  const pageId = _wikiEditPageId;
+async function saveDigestEdit() {
+  const pageId = _digestEditPageId;
   if (!pageId) return;
-  const title = document.getElementById('wikiModalTitle').value.trim();
-  const content = document.getElementById('wikiModalContent').value;
-  const category = document.getElementById('wikiModalCategory').value;
+  const title = document.getElementById('digestModalTitle').value.trim();
+  const content = document.getElementById('digestModalContent').value;
+  const category = document.getElementById('digestModalCategory').value;
   // Flush any partially typed tag
-  const tagInput = document.getElementById('wikiModalTagInput');
-  if (tagInput && tagInput.value.trim()) wikiModalAddTag(tagInput.value);
+  const tagInput = document.getElementById('digestModalTagInput');
+  if (tagInput && tagInput.value.trim()) digestModalAddTag(tagInput.value);
   // Register new tags in taxonomy
-  const newTags = wikiCurrentTags.filter(t => !_wikiTagSuggestions.includes(t));
+  const newTags = digestCurrentTags.filter(t => !_digestTagSuggestions.includes(t));
   for (const tag of newTags) {
     try {
       await api(`/api/config/tags/${encodeURIComponent(category)}`, {
@@ -1661,10 +1661,10 @@ async function saveWikiEdit() {
   }
   const updated = await api(`/api/digest/pages/${encodeURIComponent(pageId)}`, {
     method: 'PATCH',
-    body: JSON.stringify({ title, content, tags: wikiCurrentTags, category }),
+    body: JSON.stringify({ title, content, tags: digestCurrentTags, category }),
   });
-  closeWikiEdit();
-  _currentWikiPageId = updated.page_id;
+  closeDigestEdit();
+  _currentDigestPageId = updated.page_id;
   renderDigestPage(updated);
   await loadDigestPages();
 }
@@ -1672,7 +1672,7 @@ async function saveWikiEdit() {
 async function deleteDigestPage(pageId) {
   if (!confirm('Delete this digest page? This cannot be undone.')) return;
   await api(`/api/digest/pages/${encodeURIComponent(pageId)}`, { method: 'DELETE' });
-  _currentWikiPageId = null;
+  _currentDigestPageId = null;
   document.getElementById('digestPageDetail').innerHTML =
     '<div style="display:flex;align-items:center;justify-content:center;height:100%;color:var(--muted);font-size:13px;">Select a page</div>';
   await loadDigestPages();
@@ -1690,7 +1690,7 @@ async function addToDigest(itemId, btn) {
     });
     if (btn) {
       btn.disabled = false;
-      btn.innerHTML = '📝 View in Wiki';
+      btn.innerHTML = '📝 View in Digest';
       btn.onclick = () => { switchView('digest'); loadDigestPage(page.page_id); };
       btn.classList.add('primary');
     }
@@ -1746,7 +1746,7 @@ async function digestUploadFiles(files) {
 }
 
 /* =====================================================================
-   Wiki Import from Git
+   Digest Import from Git
    ===================================================================== */
 let _digestImportPages = [];  // flat page list from fetch-repo
 let _digestImportUrl = '';    // URL used for the current fetch

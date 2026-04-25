@@ -1,4 +1,4 @@
-"""Git repository cloner and markdown TOC builder for wiki import."""
+"""Git repository cloner and markdown TOC builder for digest import."""
 
 from __future__ import annotations
 import asyncio
@@ -10,7 +10,7 @@ from typing import Any
 async def fetch_repo(repo_id: str, url: str, data_dir: Path) -> dict[str, Any]:
     from utils import validate_url_no_ssrf
     validate_url_no_ssrf(url, allowed_schemes=("https",))
-    repo_dir = data_dir / "wikis" / repo_id
+    repo_dir = data_dir / "digest_repos" / repo_id
     loop = asyncio.get_event_loop()
     title = await loop.run_in_executor(None, _sync_repo, url, repo_dir)
     toc, pages = await loop.run_in_executor(None, _build_toc, repo_dir)

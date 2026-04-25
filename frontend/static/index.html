@@ -163,47 +163,47 @@
 </div>
 
 <!-- ===== DIGEST PAGE EDIT MODAL ===== -->
-<div class="modal-overlay hidden" id="wikiEditModal">
-  <div class="modal" id="wikiEditModalInner">
-    <h3>Edit Wiki Page</h3>
-    <div class="field" style="flex-shrink:0;"><label>Title</label><input type="text" id="wikiModalTitle"></div>
+<div class="modal-overlay hidden" id="digestEditModal">
+  <div class="modal" id="digestEditModalInner">
+    <h3>Edit Digest Page</h3>
+    <div class="field" style="flex-shrink:0;"><label>Title</label><input type="text" id="digestModalTitle"></div>
     <div style="display:flex;gap:10px;flex-shrink:0;">
       <div class="field" style="flex:1;">
         <label>Category</label>
-        <select id="wikiModalCategory"></select>
+        <select id="digestModalCategory"></select>
       </div>
       <div class="field" style="flex:2;">
         <label>Tags</label>
-        <div class="tag-editor" id="wikiModalTagEditor" onclick="document.getElementById('wikiModalTagInput').focus()">
-          <input class="tag-input" id="wikiModalTagInput" type="text" autocomplete="off"
-                 list="wikiModalTagSuggestions" placeholder="Add tag…"
-                 oninput="wikiModalOnTagInput(this)" onkeydown="wikiModalOnTagKeydown(event)"
-                 onchange="wikiModalOnTagChange(this)">
+        <div class="tag-editor" id="digestModalTagEditor" onclick="document.getElementById('digestModalTagInput').focus()">
+          <input class="tag-input" id="digestModalTagInput" type="text" autocomplete="off"
+                 list="digestModalTagSuggestions" placeholder="Add tag…"
+                 oninput="digestModalOnTagInput(this)" onkeydown="digestModalOnTagKeydown(event)"
+                 onchange="digestModalOnTagChange(this)">
         </div>
-        <datalist id="wikiModalTagSuggestions"></datalist>
-        <div id="wikiModalCatTagPills" style="display:none;flex-wrap:wrap;gap:4px;margin-top:6px;"></div>
+        <datalist id="digestModalTagSuggestions"></datalist>
+        <div id="digestModalCatTagPills" style="display:none;flex-wrap:wrap;gap:4px;margin-top:6px;"></div>
       </div>
     </div>
     <!-- AI Tag Suggester -->
-    <details id="wikiTagSuggester" style="flex-shrink:0;margin-bottom:8px;">
+    <details id="digestTagSuggester" style="flex-shrink:0;margin-bottom:8px;">
       <summary style="cursor:pointer;font-size:12px;color:var(--dim);user-select:none;">
         Suggest tags from document…
       </summary>
       <div style="margin-top:8px;display:flex;flex-direction:column;gap:6px;">
         <div style="display:flex;gap:6px;align-items:center;">
-          <button class="btn" id="wikiSuggestBtn" onclick="wikiSuggestTags()" style="white-space:nowrap;font-size:12px;padding:5px 10px;">Ask AI</button>
-          <span id="wikiSuggestSpinner" style="display:none;font-size:12px;color:var(--dim);"><span class="spinner"></span> Asking AI…</span>
+          <button class="btn" id="digestSuggestBtn" onclick="digestSuggestTags()" style="white-space:nowrap;font-size:12px;padding:5px 10px;">Ask AI</button>
+          <span id="digestSuggestSpinner" style="display:none;font-size:12px;color:var(--dim);"><span class="spinner"></span> Asking AI…</span>
         </div>
-        <div id="wikiSuggestResults" style="display:none;flex-wrap:wrap;gap:5px;"></div>
+        <div id="digestSuggestResults" style="display:none;flex-wrap:wrap;gap:5px;"></div>
       </div>
     </details>
     <div class="field" style="flex:1;display:flex;flex-direction:column;min-height:0;">
       <label>Content (Markdown)</label>
-      <textarea id="wikiModalContent"></textarea>
+      <textarea id="digestModalContent"></textarea>
     </div>
     <div class="modal-actions" style="flex-shrink:0;margin-top:12px;">
-      <button class="btn" onclick="closeWikiEdit()">Cancel</button>
-      <button class="btn primary" onclick="saveWikiEdit()">Save</button>
+      <button class="btn" onclick="closeDigestEdit()">Cancel</button>
+      <button class="btn primary" onclick="saveDigestEdit()">Save</button>
     </div>
   </div>
 </div>
@@ -301,7 +301,7 @@
     </div>
 
     <!-- Categories — digest view -->
-    <div class="nav-section" id="navWikiCatSection" style="display:none;">
+    <div class="nav-section" id="navDigestCatSection" style="display:none;">
       <div class="nav-section-header" onclick="toggleSection(this)">
         Categories <span class="chevron">▾</span>
       </div>
@@ -312,7 +312,7 @@
     </div>
 
     <!-- Tags — digest view -->
-    <div class="nav-section" id="navWikiTagSection" style="display:none;">
+    <div class="nav-section" id="navDigestTagSection" style="display:none;">
       <div class="nav-section-header" onclick="toggleSection(this)">
         Tags <span class="chevron">▾</span>
       </div>

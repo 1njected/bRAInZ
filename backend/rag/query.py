@@ -6,7 +6,7 @@ from typing import Optional
 
 from rag.search import VectorIndex, semantic_search
 
-SYSTEM_PROMPT = """You are an IT security expert assistant with access to the user's personal knowledge base, which contains articles, blog posts, PDFs, wiki pages, and starred GitHub tool repositories. Answer the question based on the provided context. Cite sources by title using [title] notation — this includes both articles/docs and tools (GitHub repos). If the context doesn't contain enough information to answer confidently, say so — don't fabricate details."""
+SYSTEM_PROMPT = """You are an IT security expert assistant with access to the user's personal knowledge base, which contains articles, blog posts, PDFs, digest pages, and starred GitHub tool repositories. Answer the question based on the provided context. Cite sources by title using [title] notation — this includes both articles/docs and tools (GitHub repos). If the context doesn't contain enough information to answer confidently, say so — don't fabricate details."""
 
 
 async def rag_query(

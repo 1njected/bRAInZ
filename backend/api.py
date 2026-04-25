@@ -614,7 +614,7 @@ async def ingest_bulk_urls(req: BulkURLRequest):
 # Library CRUD
 # ---------------------------------------------------------------------------
 
-_LIBRARY_EXCLUDE = {"wiki_page", "starred_repo"}
+_LIBRARY_EXCLUDE = {"digest_page", "starred_repo"}
 
 
 @app.get("/api/library", response_model=ItemListResponse)
@@ -741,7 +741,7 @@ async def list_followup(
     limit: int = Query(50, ge=1, le=500),
     offset: int = Query(0, ge=0),
 ):
-    """Return all library items and ingested tool/wiki items tagged 'followup'."""
+    """Return all library items and ingested tool/digest items tagged 'followup'."""
     index = get_index()
     results = [
         {**m, "id": item_id}
@@ -878,29 +878,29 @@ async def search(req: SearchRequest):
     idx = get_index()
 
     # Embed once, then run three parallel searches — one per content group —
-    # so each gets its own top_k budget and low-scoring wiki/tool hits aren't
+    # so each gets its own top_k budget and low-scoring digest/tool hits aren't
     # pushed out by high-scoring library hits.
     embeddings = await llm.embed([req.query])
     query_embedding = embeddings[0]
 
     library_types = [ct for ct in (
         set(m.get("content_type") for m in idx.all_items().values())
-    ) if ct not in ("wiki_page", "starred_repo")]
+    ) if ct not in ("digest_page", "starred_repo")]
 
-    lib_results, wiki_results, tool_results = await _asyncio.gather(
+    lib_results, digest_results, tool_results = await _asyncio.gather(
         semantic_search(req.query, llm, vi, idx, DATA_DIR,
                         category=req.category, tags=req.tags,
                         top_k=req.top_k, content_types=library_types,
                         query_embedding=query_embedding),
         semantic_search(req.query, llm, vi, idx, DATA_DIR,
-                        top_k=10, content_types=["wiki_page"],
+                        top_k=10, content_types=["digest_page"],
                         query_embedding=query_embedding),
         semantic_search(req.query, llm, vi, idx, DATA_DIR,
                         top_k=10, content_types=["starred_repo"],
                         query_embedding=query_embedding),
     )
 
-    results = lib_results + wiki_results + tool_results
+    results = lib_results + digest_results + tool_results
     return SearchResponse(results=results)
 
 
@@ -1148,7 +1148,7 @@ async def import_digest_pages(req: ImportDigestPagesRequest):
     import hashlib
     from rag.digest import import_digest_page
     repo_id = "import-" + hashlib.sha1(req.url.encode()).hexdigest()[:8]
-    repo_dir = DATA_DIR / "wikis" / repo_id
+    repo_dir = DATA_DIR / "digest_repos" / repo_id
 
     if not repo_dir.exists():
         raise HTTPException(400, "Repo not fetched — call fetch-repo first")
