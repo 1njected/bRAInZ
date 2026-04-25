@@ -52,6 +52,26 @@ _tools_refreshing: dict[str, str] = {}
 
 log = logging.getLogger(__name__)
 
+
+def _clean_llm_error(e: Exception) -> str:
+    """Return a concise, human-readable message from LLM API exceptions.
+
+    Strips the raw JSON/dict repr that SDKs append to HTTP error strings so
+    the UI sees e.g. "429 RESOURCE_EXHAUSTED: You exceeded your quota" rather
+    than a 400-char Python dict.
+    """
+    import re
+    msg = str(e)
+    status_m = re.match(r'^(\d{3}\s+\S+)', msg)
+    inner_m  = re.search(r"""['"]message['"]\s*:\s*['"]([^'"\\]+)""", msg)
+    if status_m:
+        status = status_m.group(1)
+        if inner_m:
+            detail = inner_m.group(1).split('\n')[0].split('\\n')[0]
+            return f"{status}: {detail}"
+        return status
+    return msg
+
 # Route llm.* logs to stderr alongside uvicorn output
 _llm_log = logging.getLogger("llm")
 _llm_log.setLevel(logging.INFO)
@@ -445,7 +465,7 @@ async def ingest_url(req: IngestURLRequest):
         elapsed = int((time.monotonic() - t0) * 1000)
         ts = time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime())
         _access_log.error('%s INGEST %s status=error error=%r %dms', ts, req.url, str(e), elapsed)
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail=_clean_llm_error(e))
 
 
 @app.post("/api/ingest/snapshot", response_model=IngestResponse)
@@ -477,7 +497,7 @@ async def ingest_snapshot(req: IngestSnapshotRequest):
         elapsed = int((time.monotonic() - t0) * 1000)
         ts = time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime())
         _access_log.error('%s SNAPSHOT %s status=error error=%r %dms', ts, req.url, str(e), elapsed)
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail=_clean_llm_error(e))
 
 
 @app.post("/api/ingest/pdf", response_model=IngestResponse)
@@ -503,6 +523,8 @@ async def ingest_pdf(
             data_dir=DATA_DIR,
             vector_index=_vector_index,
         )
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=_clean_llm_error(e))
     finally:
         os.unlink(tmp_path)
     return IngestResponse(**result)
@@ -534,6 +556,8 @@ async def ingest_image(
             data_dir=DATA_DIR,
             vector_index=_vector_index,
         )
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=_clean_llm_error(e))
     finally:
         os.unlink(tmp_path)
     return IngestResponse(**result)
@@ -542,16 +566,19 @@ async def ingest_image(
 @app.post("/api/ingest/text", response_model=IngestResponse)
 async def ingest_text(req: IngestTextRequest):
     from pipeline import ingest_text_pipeline
-    result = await ingest_text_pipeline(
-        title=req.title,
-        body=req.body,
-        category=req.category,
-        tags=req.tags,
-        llm=get_llm(),
-        index=get_index(),
-        data_dir=DATA_DIR,
-        vector_index=_vector_index,
-    )
+    try:
+        result = await ingest_text_pipeline(
+            title=req.title,
+            body=req.body,
+            category=req.category,
+            tags=req.tags,
+            llm=get_llm(),
+            index=get_index(),
+            data_dir=DATA_DIR,
+            vector_index=_vector_index,
+        )
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=_clean_llm_error(e))
     return IngestResponse(**result)
 
 
@@ -1420,10 +1447,14 @@ async def ingest_feed_entries(feed_id: str, body: dict = {}):
             else:
                 results["imported"] += 1
                 results["item_ids"].append(r["item_id"])
-        except Exception:
+        except Exception as e:
             results["failed"] += 1
+            results.setdefault("errors", []).append(_clean_llm_error(e))
 
     await asyncio.gather(*[_ingest_one(u) for u in entry_urls])
+
+    if results["failed"] and not results["imported"] and not results["skipped"]:
+        raise HTTPException(500, results["errors"][0] if results.get("errors") else "Ingest failed")
 
     now = datetime.datetime.utcnow().isoformat() + "Z"
     _update_feed(DATA_DIR, feed_id, {"last_fetched": now})
@@ -1856,6 +1887,14 @@ async def ingest_tool_repos(tool_id: str, body: Optional[dict] = None):
 STATIC_DIR = Path(__file__).parent.parent / "frontend" / "static"
 if STATIC_DIR.exists():
     app.mount("/static", StaticFiles(directory=str(STATIC_DIR)), name="static")
+
+
+@app.middleware("http")
+async def no_cache_static(request: Request, call_next):
+    response = await call_next(request)
+    if request.url.path.startswith("/static/") and request.url.path.endswith((".js", ".css")):
+        response.headers["Cache-Control"] = "no-cache"
+    return response
 
 
 @app.get("/", response_class=HTMLResponse)

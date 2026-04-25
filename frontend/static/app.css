@@ -676,7 +676,9 @@
     .field input:focus, .field select:focus, .field textarea:focus { border-color: var(--hi); }
     .field textarea { resize: vertical; min-height: 80px; }
     .modal-actions { display: flex; gap: 8px; margin-top: 16px; justify-content: flex-end; }
-    #ingestStatus { font-size: 12px; margin-top: 8px; min-height: 16px; }
+    #ingestStatus { font-size: 13px; margin-top: 12px; min-height: 0; word-break: break-word; line-height: 1.5; }
+    #ingestStatus.err { background: rgba(255,80,80,0.1); border: 1px solid var(--hi); border-radius: 6px; padding: 10px 12px; font-weight: 500; }
+    #ingestStatus.ok  { padding: 4px 0; }
     .ok  { color: var(--success); }
     .err { color: var(--hi); }
 
@@ -1106,3 +1108,14 @@
       header { padding: 0 8px; gap: 6px; }
       .header-stats { display: none; }
     }
+
+    #errorPopup {
+      display: none;
+      position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%);
+      background: var(--panel); border: 1px solid var(--hi); border-radius: 8px;
+      color: var(--hi); font-size: 13px; padding: 12px 18px;
+      max-width: min(480px, 90vw); word-break: break-word; line-height: 1.5;
+      z-index: 1000; box-shadow: 0 4px 20px rgba(0,0,0,0.4);
+      cursor: pointer;
+    }
+    #errorPopup.visible { display: block; }
