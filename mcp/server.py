@@ -2,27 +2,72 @@
 
 Exposes tools for searching, querying, and reading library items and digest pages.
 
-Configuration (environment variables or .env file):
-  BRAINZ_URL    Base URL of the bRAInZ API  (default: http://localhost:8000)
-  BRAINZ_KEY    API key                      (default: empty, for open-access installs)
+Configuration (environment variables):
+  BRAINZ_URL        Base URL of the bRAInZ API  (default: http://localhost:8000)
+  BRAINZ_KEY        bRAInZ API key               (default: empty, for open-access installs)
+  MCP_BEARER_TOKEN  Bearer token required by HTTP clients (default: empty, no auth)
+  MCP_PORT          Port for HTTP transport       (default: 8002)
+  MCP_ALLOWED_HOSTS Comma-separated allowed Host headers for DNS rebinding protection
+                    (default: empty = protection disabled; set to your public hostname
+                    when running behind a reverse proxy, e.g. "brainz.example.ts.net")
+
+Transport:
+  stdio (default)       — for Claude Desktop / Claude Code local use
+  streamable-http       — for Claude.ai MCP Connector (remote use)
+
+  Pass --transport streamable-http to enable HTTP mode.
 """
 
 from __future__ import annotations
 
 import os
+import sys
 from typing import Any
 
 import httpx
 from mcp.server.fastmcp import FastMCP
+from mcp.server.transport_security import TransportSecuritySettings
 
 # ---------------------------------------------------------------------------
 # Config
 # ---------------------------------------------------------------------------
 
-BRAINZ_URL = os.environ.get("BRAINZ_URL", "http://localhost:8000").rstrip("/")
-BRAINZ_KEY = os.environ.get("BRAINZ_KEY", "")
+BRAINZ_URL        = os.environ.get("BRAINZ_URL", "http://localhost:8000").rstrip("/")
+BRAINZ_KEY        = os.environ.get("BRAINZ_KEY", "")
+MCP_BEARER_TOKEN  = os.environ.get("MCP_BEARER_TOKEN", "")
+MCP_PORT          = int(os.environ.get("MCP_PORT", "8002"))
+MCP_ALLOWED_HOSTS = os.environ.get("MCP_ALLOWED_HOSTS", "")
 
-mcp = FastMCP("bRAInZ")
+_security = TransportSecuritySettings(
+    enable_dns_rebinding_protection=bool(MCP_ALLOWED_HOSTS),
+    allowed_hosts=MCP_ALLOWED_HOSTS.split(",") if MCP_ALLOWED_HOSTS else [],
+)
+
+mcp = FastMCP("bRAInZ", transport_security=_security)
+
+
+# ---------------------------------------------------------------------------
+# Bearer auth middleware (HTTP transport only)
+# ---------------------------------------------------------------------------
+
+def _make_auth_middleware(app):
+    """Wrap a Starlette app with bearer token enforcement."""
+    from starlette.responses import JSONResponse
+
+    async def middleware(scope, receive, send):
+        if scope["type"] == "http" and MCP_BEARER_TOKEN:
+            headers = dict(scope.get("headers", []))
+            auth = headers.get(b"authorization", b"").decode()
+            if auth != f"Bearer {MCP_BEARER_TOKEN}":
+                response = JSONResponse(
+                    {"error": "Unauthorized"}, status_code=401,
+                    headers={"WWW-Authenticate": "Bearer"},
+                )
+                await response(scope, receive, send)
+                return
+        await app(scope, receive, send)
+
+    return middleware
 
 
 def _headers() -> dict[str, str]:
@@ -240,4 +285,25 @@ def health() -> dict:
 # ---------------------------------------------------------------------------
 
 if __name__ == "__main__":
-    mcp.run()
+    transport = "stdio"
+    for arg in sys.argv[1:]:
+        if arg == "--transport" or arg.startswith("--transport="):
+            transport = arg.split("=", 1)[-1] if "=" in arg else sys.argv[sys.argv.index(arg) + 1]
+
+    if transport in ("sse", "streamable-http"):
+        import uvicorn
+        if transport == "sse":
+            app = mcp.sse_app()
+        else:
+            app = mcp.streamable_http_app()
+        if MCP_BEARER_TOKEN:
+            app = _make_auth_middleware(app)
+        uvicorn.run(
+            app,
+            host="0.0.0.0",
+            port=MCP_PORT,
+            forwarded_allow_ips="*",
+            proxy_headers=True,
+        )
+    else:
+        mcp.run(transport="stdio")

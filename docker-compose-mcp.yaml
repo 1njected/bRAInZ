@@ -1,0 +1,15 @@
+services:
+  brainz-mcp:
+    build:
+      context: .
+      dockerfile: mcp/Dockerfile
+    ports:
+      - "${BIND_HOST:-127.0.0.1}:${MCP_PORT:-8002}:${MCP_PORT:-8002}"
+    environment:
+      - BRAINZ_URL=${BRAINZ_URL:-http://host.docker.internal:8000}
+      - BRAINZ_KEY=${BRAINZ_KEY:-}
+      - MCP_BEARER_TOKEN=${MCP_BEARER_TOKEN:-}
+      - MCP_PORT=${MCP_PORT:-8002}
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    restart: unless-stopped

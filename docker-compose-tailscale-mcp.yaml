@@ -1,0 +1,59 @@
+services:
+  brainz-tailscale:
+    image: tailscale/tailscale:latest
+    container_name: brainz-tailscale
+    environment:
+      - TS_HOSTNAME=${TAILSCALE_HOSTNAME:-brainz-tailscale}
+      - TS_AUTHKEY=${TAILSCALE_AUTH_KEY:-}
+      - TS_STATE_DIR=/var/lib/tailscale
+      - TS_USERSPACE=false
+      - TS_EXTRA_ARGS=--accept-routes --accept-dns
+      # Expose MCP server over HTTPS on the Tailscale interface.
+      # tailscale serve proxies https://hostname.ts.net -> http://localhost:8002
+      - TS_SERVE_CONFIG=/config/brainz-tailscale-mcp.json
+    volumes:
+      - ./tailscale/state:/var/lib/tailscale
+      - ./tailscale/config:/config
+    devices:
+      - /dev/net/tun:/dev/net/tun
+    cap_add:
+      - net_admin
+      - sys_module
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    restart: unless-stopped
+
+  brainz:
+    build: .
+    volumes:
+      - ./data:/data
+      - ./backend:/app
+      - ./frontend:/frontend
+    environment:
+      - API_KEYS=${API_KEYS}
+      - ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY:-}
+      - OPENAI_API_KEY=${OPENAI_API_KEY:-}
+      - OLLAMA_CLOUD_API_KEY=${OLLAMA_CLOUD_API_KEY:-}
+      - GOOGLE_AI_API_KEY=${GOOGLE_AI_API_KEY:-}
+      - MISTRAL_API_KEY=${MISTRAL_API_KEY:-}
+      - GITHUB_TOKEN=${GITHUB_TOKEN:-}
+      - DATA_DIR=/data
+    restart: unless-stopped
+    network_mode: service:brainz-tailscale
+
+  brainz-mcp:
+    build:
+      context: .
+      dockerfile: mcp/Dockerfile
+    environment:
+      - BRAINZ_URL=http://localhost:8000
+      - BRAINZ_KEY=${API_KEYS}
+      - MCP_BEARER_TOKEN=${MCP_BEARER_TOKEN:-}
+      - MCP_PORT=${MCP_PORT:-8002}
+      - MCP_ALLOWED_HOSTS=${MCP_ALLOWED_HOSTS:-}
+    restart: unless-stopped
+    # Share Tailscale's network — MCP reaches brainz on localhost:8000,
+    # and Tailscale Serve can proxy https -> localhost:8002
+    network_mode: service:brainz-tailscale
+    depends_on:
+      - brainz-tailscale
