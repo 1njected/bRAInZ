@@ -16,7 +16,6 @@ Read-only access to your knowledge base for Claude Code, Claude Desktop, and Cla
 | `list_library` | Browse items with optional category/tag filter |
 | `get_item` | Full content of an item by ID |
 | `search` | Semantic search across the library |
-| `query` | RAG — AI-generated answer grounded in the library |
 | `list_digest_pages` | List Digest pages |
 | `get_digest_page` | Full content of a Digest page |
 
@@ -132,14 +131,6 @@ category – optional filter
 tag      – optional filter
 ```
 Returns: `[{item_id, title, category, url, snippet}]`
-
-### `query`
-```
-question – the question to answer
-category – optional filter
-top_k    – source chunks to retrieve (default 8)
-```
-Returns: `{answer, sources: [{item_id, title, url}]}`
 
 ### `list_library`
 ```
