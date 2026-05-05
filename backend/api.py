@@ -917,11 +917,35 @@ async def search_library(req: SearchRequest):
     library_types = [ct for ct in (
         set(m.get("content_type") for m in idx.all_items().values())
     ) if ct not in _LIBRARY_EXCLUDE]
-    results = await semantic_search(req.query, llm, vi, idx, DATA_DIR,
-                                    category=req.category, tags=req.tags,
-                                    top_k=req.top_k, content_types=library_types,
-                                    query_embedding=query_embedding)
-    return SearchResponse(results=results)
+
+    # Run text and semantic searches in parallel
+    text_raw, semantic_results = await asyncio.gather(
+        asyncio.to_thread(idx.search, category=req.category, tag=None, text_query=req.query),
+        semantic_search(req.query, llm, vi, idx, DATA_DIR,
+                        category=req.category, tags=req.tags,
+                        top_k=req.top_k, content_types=library_types,
+                        query_embedding=query_embedding),
+    )
+
+    # Build text-match results (exclude non-library types), score 1.0 to rank them first
+    text_matches = []
+    for m in text_raw:
+        if m.get("content_type", "text") in _LIBRARY_EXCLUDE:
+            continue
+        text_matches.append({
+            "item_id": m["id"],
+            "score": 1.0,
+            "title": m.get("title", ""),
+            "url": m.get("url"),
+            "category": m.get("category", "misc"),
+            "content": m.get("summary", ""),
+            "content_type": m.get("content_type", "text"),
+        })
+
+    # Merge: text matches first, then semantic results not already in text matches
+    seen = {r["item_id"] for r in text_matches}
+    merged = text_matches + [r for r in semantic_results if r["item_id"] not in seen]
+    return SearchResponse(results=merged[:req.top_k])
 
 
 # ---------------------------------------------------------------------------
