@@ -2047,7 +2047,9 @@ async function previewFeed(feedId) {
         contentEl = document.createElement('div');
         contentEl.className = 'rss-entry-body';
         contentEl.innerHTML = DOMPurify.sanitize(entry.content, { ADD_ATTR: ['target'] });
-        contentEl.querySelectorAll('a').forEach(a => { a.target = '_blank'; a.rel = 'noopener'; });
+        contentEl.querySelectorAll('a').forEach(a => {
+          if (a instanceof HTMLAnchorElement) { a.target = '_blank'; a.rel = 'noopener'; }
+        });
 
         titleEl.style.cursor = 'pointer';
         titleEl.addEventListener('click', () => {
