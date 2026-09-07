@@ -4,8 +4,13 @@ from __future__ import annotations
 import asyncio
 import json
 import re
+from functools import partial
 from pathlib import Path
 from typing import Any
+
+
+class FeedFetchError(RuntimeError):
+    """Raised when a feed could not be retrieved (as opposed to being genuinely empty)."""
 
 
 async def fetch_feed(url: str) -> dict[str, Any]:
@@ -28,6 +33,7 @@ async def fetch_feed(url: str) -> dict[str, Any]:
     timeout = cfg.get("ingestion", {}).get("request_timeout", 30)
 
     raw_content: bytes | None = None
+    fetch_error: Exception | None = None
     try:
         import httpx
         async with httpx.AsyncClient(
@@ -38,14 +44,25 @@ async def fetch_feed(url: str) -> dict[str, Any]:
             resp = await client.get(url)
             resp.raise_for_status()
             raw_content = resp.content
-    except Exception:
-        pass  # fall through to feedparser direct fetch
+    except Exception as exc:
+        fetch_error = exc  # fall through to feedparser direct fetch
 
     loop = asyncio.get_event_loop()
     if raw_content is not None:
         d = await loop.run_in_executor(None, feedparser.parse, raw_content)
     else:
-        d = await loop.run_in_executor(None, feedparser.parse, url)
+        # Pass the configured User-Agent here too — the default feedparser agent is
+        # blocked outright by Reddit and others, which yields a 429 that feedparser
+        # reports as a *successful* parse with zero entries.
+        d = await loop.run_in_executor(None, partial(feedparser.parse, url, agent=user_agent))
+        status = getattr(d, "status", None)
+        if status is not None and status >= 400:
+            raise FeedFetchError(
+                f"feed fetch failed with HTTP {status}"
+                + (f" (direct fetch: {fetch_error})" if fetch_error else "")
+            )
+        if not d.entries and fetch_error is not None:
+            raise FeedFetchError(f"feed fetch failed: {fetch_error}")
 
     is_reddit = bool(re.search(r"reddit\.com", url, re.IGNORECASE))
 
@@ -97,12 +114,25 @@ async def fetch_feed(url: str) -> dict[str, Any]:
     }
 
 
-def save_feed_cache(data_dir: Path, feed_id: str, data: dict[str, Any]) -> None:
-    """Save fetched feed data to per-feed JSON cache."""
+def save_feed_cache(data_dir: Path, feed_id: str, data: dict[str, Any]) -> bool:
+    """Save fetched feed data to per-feed JSON cache.
+
+    Refuses to replace a populated cache with an empty one — a zero-entry result is
+    far more often a blocked/rate-limited fetch than a feed that genuinely emptied,
+    and overwriting would silently destroy the user's unread items. Returns False
+    when the write was skipped for that reason.
+    """
     cache_dir = data_dir / "rssfeeds"
     cache_dir.mkdir(parents=True, exist_ok=True)
     cache_path = cache_dir / f"{feed_id}.json"
+
+    if not (data.get("entries") or []):
+        existing = load_feed_cache(data_dir, feed_id)
+        if existing and (existing.get("entries") or []):
+            return False
+
     cache_path.write_text(json.dumps(data, ensure_ascii=False, indent=2), encoding="utf-8")
+    return True
 
 
 def load_feed_cache(data_dir: Path, feed_id: str) -> dict[str, Any] | None:

@@ -226,7 +226,8 @@ async def _feed_refresh_loop():
                 continue
             try:
                 data = await fetch_feed(feed["url"])
-                save_feed_cache(DATA_DIR, feed["id"], data)
+                if not save_feed_cache(DATA_DIR, feed["id"], data):
+                    raise RuntimeError("feed returned no entries; kept previous cache")
                 urls = [e["url"] for e in data["entries"][:50] if e.get("url")]
                 set_latest_urls(DATA_DIR, feed["id"], urls)
                 now = datetime.datetime.utcnow().isoformat() + "Z"
@@ -1305,7 +1306,8 @@ async def refresh_all_feeds():
             continue
         try:
             data = await fetch_feed(feed["url"])
-            save_feed_cache(DATA_DIR, feed["id"], data)
+            if not save_feed_cache(DATA_DIR, feed["id"], data):
+                raise RuntimeError("feed returned no entries; kept previous cache")
             urls = [e["url"] for e in data["entries"][:50] if e.get("url")]
             set_latest_urls(DATA_DIR, feed["id"], urls)
             now = datetime.datetime.utcnow().isoformat() + "Z"
