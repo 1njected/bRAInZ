@@ -25,7 +25,7 @@ import sys
 from typing import Any
 
 import httpx
-from mcp.server.fastmcp import FastMCP
+from mcp.server.mcpserver import MCPServer
 from mcp.server.transport_security import TransportSecuritySettings
 
 # ---------------------------------------------------------------------------
@@ -43,7 +43,9 @@ _security = TransportSecuritySettings(
     allowed_hosts=MCP_ALLOWED_HOSTS.split(",") if MCP_ALLOWED_HOSTS else [],
 )
 
-mcp = FastMCP("bRAInZ", transport_security=_security)
+# transport_security moved off the constructor in mcp 2.x — it is passed to the
+# app factory (or run()) instead.
+mcp = MCPServer("bRAInZ")
 
 
 # ---------------------------------------------------------------------------
@@ -278,9 +280,9 @@ if __name__ == "__main__":
     if transport in ("sse", "streamable-http"):
         import uvicorn
         if transport == "sse":
-            app = mcp.sse_app()
+            app = mcp.sse_app(transport_security=_security)
         else:
-            app = mcp.streamable_http_app()
+            app = mcp.streamable_http_app(transport_security=_security)
         if MCP_BEARER_TOKEN:
             app = _make_auth_middleware(app)
         uvicorn.run(
